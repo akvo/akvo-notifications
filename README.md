@@ -1,0 +1,4 @@
+akvo-notifications
+==================
+
+Notification service
