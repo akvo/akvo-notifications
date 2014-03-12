@@ -1,4 +1,4 @@
-;  Copyright (C) 2013 Stichting Akvo (Akvo Foundation)
+;  Copyright (C) 2014 Stichting Akvo (Akvo Foundation)
 ;
 ;  This file is part of Akvo Notifications.
 ;
@@ -21,10 +21,10 @@
   :license {:name "GNU Affero General Public License"
             :url "https://www.gnu.org/licenses/agpl"}
   :dependencies [[org.clojure/clojure "1.5.1"]
-                 [com.novemberain/langohr "2.5.0"]
+                 [com.novemberain/langohr "2.7.1"]
                  [liberator "0.11.0"]
                  [compojure "1.1.3"]
-		 [ring/ring-core "1.2.1"]
+                 [ring/ring-core "1.2.1"]
                  [ring/ring-jetty-adapter "1.2.1"]]
   :plugins [[lein-ring "0.8.10"]]
   :ring {

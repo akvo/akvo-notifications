@@ -1,4 +1,4 @@
-;  Copyright (C) 2013 Stichting Akvo (Akvo Foundation)
+;  Copyright (C) 2014 Stichting Akvo (Akvo Foundation)
 ;
 ;  This file is part of Akvo Notifications.
 ;
@@ -45,8 +45,8 @@
 
 (defroutes api
   (ANY "/" [] index)
-  (ANY "/services/" [] services)
-  (ANY "/services/:service/" [service] (services-details service))
+  (ANY "/services" [] services)
+  (ANY "/services/:service" [service] (services-details service))
   (route/not-found "Page not found"))
 
 (def handler (wrap-params api))
