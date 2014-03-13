@@ -1,6 +1,102 @@
+# Lein
 pom.xml
 *jar
 /lib/
 /classes/
-/targets/
+/target/
 .lein-deps-sum
+.lein-repl-history
+.lein-plugins/
+
+# Emacs
+# -*- mode: gitignore; -*-
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+## Org-mode
+.org-id-locations
+*_archive
+
+## flymake-mode
+*_flymake.*
+
+## eshell files
+/eshell/history
+/eshell/lastdir
+
+## elpa packages
+/elpa/
+
+# Vim
+[._]*.s[a-w][a-z]
+[._]s[a-w][a-z]
+*.un~
+Session.vim
+.netrwhist
+*~
+
+# Eclipse & CCW
+.externalToolBuilders/*
+.classpath
+.project
+.settings/*
+bin/*
+classes/*
+
+# SublimeText
+# workspace files are user-specific
+*.sublime-workspace
+
+# project files should be checked into the repository, unless a significant
+# proportion of contributors will probably not be using SublimeText
+# *.sublime-project
+
+# Textmate
+*.tmproj
+*.tmproject
+tmtags
+
+# Dreamweaver
+_notes
+dwsync.xml
+
+# Linux
+*~
+
+# OS X
+.DS_Store
+.AppleDouble
+.LSOverride
+
+## Icon must ends with two \r.
+Icon
+
+## Thumbnails
+._*
+
+## Files that might appear on external disk
+.Spotlight-V100
+.Trashes
+
+# Windows
+# Windows image file caches
+Thumbs.db
+ehthumbs.db
+
+## Folder config file
+Desktop.ini
+
+## Recycle Bin used on file shares
+$RECYCLE.BIN/
+
+## Windows Installer files
+*.cab
+*.msi
+*.msm
+*.msp
