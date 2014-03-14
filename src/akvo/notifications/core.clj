@@ -45,7 +45,8 @@
   (eh/destroy))
 
 (defn -main
-  ""
+  "If the app is started as a service the environmental varaiable PORT
+  will be used."
   [& [port]]
   (let [port (Integer. (or port (System/getenv "PORT") 3000))]
     (init)
