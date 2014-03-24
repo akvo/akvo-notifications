@@ -21,6 +21,7 @@
   :license {:name "GNU Affero General Public License"
             :url "https://www.gnu.org/licenses/agpl"}
   :dependencies [[cheshire "5.3.1"]
+                 [com.fasterxml.jackson.core/jackson-core "2.3.1-SNAPSHOT"]
                  [com.novemberain/langohr "2.7.1"]
                  [compojure "1.1.3"]
                  [liberator "0.11.0"]
@@ -35,6 +36,7 @@
          :port 3000
          :auto-reload? true}
   :profiles {:dev {:dependencies [[javax.servlet/servlet-api "2.5"]
-                                  [ring-mock "0.1.5"]]}}
+                                  [ring-mock "0.1.5"]
+                                  [midje "1.6.3"]]}}
   :main akvo.notifications.core
   :aot [akvo.notifications.core])

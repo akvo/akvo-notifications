@@ -18,34 +18,20 @@
 (ns akvo.notifications.rest-api
   ^{:doc "REST API for other services to consume."}
   (:require [akvo.notifications.data-store :as data]
+            [akvo.notifications.rest-utils :as utils :refer [malformed?
+                                                             handle-malformed
+                                                             standard-config
+                                                             processable?]]
             [cheshire.core :as cheshire]
-            [clojure.edn :as edn]
-            [clojure.pprint :refer [pprint]]
             [compojure.core :refer [defroutes ANY]]
-            [compojure.route :as route]
-            [liberator.core :refer [defresource resource]]
-            [ring.middleware.params :refer [wrap-params]]
+            [liberator.core :refer [defresource by-method]]
+            [liberator.dev :refer [wrap-trace]]
             [ring.util.request :refer [request-url]]))
-
-;;; Setup
-(def available-media-types
-  ["application/json" "application/edn"])
-
-(def error-responses
-  {:404 {:reason "Resource not found."}
-   :415 (format "We only speak: %s." available-media-types)
-   :422 {:reason "Could not process request."}})
-
-(def standard-config
-  {:available-media-types       available-media-types
-   :handle-not-acceptable       (:415 error-responses)
-   :handle-not-found            (:404 error-responses)
-   :handle-unprocessable-entity (:422 error-responses)})
 
 (def api-map
   {:name        "akvo-notifications"
    :description "This API...."
-   :supported-media-types available-media-types
+   :supported-media-types utils/available-media-types
    :links       [{:rel  "self"
                   :href "/"}]
    :resources   [{:name        "services"
@@ -57,77 +43,50 @@
                   :links       [{:rel  "self"
                                  :href "/users"}]}]})
 
-;;; Helpers
-(defn- slurp-body
-  [ctx]
-  (slurp (get-in ctx [:request :body])))
-
-(defmulti #^{:private true} processable-body?
-  "Dispatches to process body based on content-type"
-  (fn [ctx] (get-in ctx [:request :content-type]))
-  :default :unsupported)
-
-(defmethod processable-body? :unsupported [_] false)
-(defmethod processable-body? "application/json"
-  [ctx]
-  (cheshire/parse-string (slurp-body ctx) true))
-(defmethod processable-body? "application/edn"
-  [ctx]
-  (edn/read-string (slurp-body ctx)))
-
-(defmulti #^{:private true} processable?
-  "Dispatch based on reqeust method. This since we only want to process
-  the body for post requests."
-  (fn [ctx validator] (get-in ctx [:request :request-method]))
-  :default :unsupported)
-
-(defmethod processable? :unsupported [_ _] false)
-(defmethod processable? :get [_ _] true)
-(defmethod processable? :post
-  [ctx validator]
-  (try
-    (if-let [body (->> (processable-body? ctx)
-                       validator
-                       :name)]
-      {:request-body body} false)
-    (catch AssertionError e false)))
-
-;;; Validators
-(defn service-validator
-  "This is a validator that works with the fixture data so we need to
-  rework this function once we hook in a proper data store.
-
-  First we verify that there is a \"name\" keyval. Second we make sure
-  the name is not already taken."
-  [data]
-  {:pre [(:name data)
-         (not (contains? (->> @data/services-data
-                              (map #(assoc {} (:name %) (:id %)))
-                              (into {}))
-                         (:name data)))]}
-  data)
-
 ;;; Resources
 (defresource root
   standard-config
   :handle-ok api-map)
 
+(defresource not-found
+  standard-config
+  :allowed-methods [:get :post]
+  :post-to-missing? false
+  :exists? false)
+
+;; Notifications resources
 (defresource notif-coll
   standard-config
   :exists? false)
 
- (defresource notif
-   [id]
-   standard-config
-   :exists? false)
+(defresource notif
+  [id]
+  standard-config
+  :exists? false)
+
+;; Services resources
+(defn- existing-services
+  "Service validator helper function"
+  [coll]
+  (reduce #(assoc %1 (:name %2) (:id %2)) {} coll))
+
+(defn- services-validator
+  "Validator fuction for adding new services. First "
+  [body]
+  {:pre [(:name body)
+         (not (contains? (existing-services @data/services-data)
+                         (:name body)))]}
+  true)
 
 (defresource services-coll
   standard-config
   :allowed-methods [:get :post]
   :handle-ok (fn [ctx] (data/services-coll))
-  :processable? (fn [ctx] (processable? ctx service-validator))
+  :processable? (by-method {:get true
+                            :post (fn [ctx]
+                                    (processable? ctx services-validator))})
   :post! (fn [ctx]
-           (let [service-name (:request-body ctx)
+           (let [service-name (:name (:request-body ctx))
                  service-id   (data/add-service service-name)]
              {::id (str service-id)}))
   :post-redirect? (fn [ctx]
@@ -141,6 +100,7 @@
   :exists? (fn [ctx] (not (nil? (data/service id))))
   :handle-ok (fn [_] (data/service id)))
 
+;; Users resources
 (defresource users-coll
   standard-config
   :allowed-methods [:get]
@@ -152,12 +112,8 @@
    :exists? (fn [ctx] (not (nil? (data/user id))))
    :handle-ok (fn [_] (data/user id)))
 
-(defresource not-found
-  standard-config
-  :exists? false)
-
 ;;; Routes
-(defroutes api
+(defroutes endpoints
   (ANY "/" [] root)
   (ANY "/notifications" notif-coll)
   (ANY "/notifications/:id" [id] (notif id))
@@ -167,5 +123,5 @@
   (ANY "/users/:id" [id] (user id))
   (ANY "*" [] not-found))
 
-(def handler (-> api
-                 wrap-params))
+(def handler (-> endpoints
+                 (wrap-trace :header :ui)))

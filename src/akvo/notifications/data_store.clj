@@ -19,14 +19,20 @@
   ^{:doc "Simple fixture data, until we hook in a real db"}
   akvo.notifications.data-store)
 
+;; (defn tuple-vec->id-tuple
+;;   "\"Vector of truples to tuples of id's\"; transforms a vector of
+;;   tuples into a map with the tuples id as keywords. Example: [{:id 1
+;;   :name \"Bob} {:id 2 :name \"Jane\"}] -> {:1 {:id :name \"example\"} :2
+;;   {:id 2 :name \"Jane }}"
+;;   [tuple-vec]
+;;   (let [l (map #(assoc {} (keyword (str (:id %))) %) tuple-vec)]
+;;     (into {} l)))
+
 (defn tuple-vec->id-tuple
-  "\"Vector of truples to tuples of id's\"; transforms a vector of
-  tuples into a map with the tuples id as keywords. Example: [{:id 1
-  :name \"Bob} {:id 2 :name \"Jane\"}] -> {:1 {:id :name \"example\"} :2
-  {:id 2 :name \"Jane }}"
   [tuple-vec]
-  (let [l (map #(assoc {} (keyword (str (:id %))) %) tuple-vec)]
-    (into {} l)))
+  (if (empty? tuple-vec)
+    {}
+    (reduce #(assoc %1 (keyword (str (:id %2))) %2) {} tuple-vec)))
 
 ;;; Services
 (def services-data
