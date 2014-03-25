@@ -21,7 +21,6 @@
   :license {:name "GNU Affero General Public License"
             :url "https://www.gnu.org/licenses/agpl"}
   :dependencies [[cheshire "5.3.1"]
-                 [com.fasterxml.jackson.core/jackson-core "2.3.1-SNAPSHOT"]
                  [com.novemberain/langohr "2.7.1"]
                  [compojure "1.1.3"]
                  [liberator "0.11.0"]

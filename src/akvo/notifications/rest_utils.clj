@@ -45,13 +45,13 @@
 (defmethod malformed? "application/json"
   [ctx]
   (try
-    [false, {:request-body (cheshire/parse-string (slurp-body ctx) true)}]
-    (catch JsonParseException e [true, {:body-error "Malformed JSON"}])))
+    [false {:request-body (cheshire/parse-string (slurp-body ctx) true)}]
+    (catch JsonParseException e [true {:body-error "Malformed JSON"}])))
 (defmethod malformed? "application/edn"
   [ctx]
   (try
-    [false, {:request-body (edn/read-string (slurp-body ctx))}]
-    (catch RuntimeException e [true, {:body-error "Malformed EDN"}])))
+    [false {:request-body (edn/read-string (slurp-body ctx))}]
+    (catch RuntimeException e [true {:body-error "Malformed EDN"}])))
 
 ;; handle-malformed ------------------------------------------------------------
 (defmulti handle-malformed
