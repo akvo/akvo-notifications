@@ -1,5 +1,7 @@
 # Akvo notifications
 
+**Very early work in progress!!**
+
 The job of the notification service is to react on events from services
 and make those events into notifications based on users. One could argue
 that the notification service twists the perspective from services to
@@ -37,9 +39,9 @@ That should open a browser window with http://localhost:3000
 ## REST API
 Available routes, you will need trailing slashes.
 
-/services/
-/services/1/ ; akvo-rsr
-/services/2/ ; akvo-rsr
+/services
+/services/1 ; akvo-rsr
+/services/2 ; akvo-rsr
 
 ## Legal
 Copyright (C) 2014 Stichting Akvo (Akvo Foundation)

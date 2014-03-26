@@ -63,9 +63,7 @@
                                         ; (send-simple-message rabbit-formula)
 
 (defn init []
-  "Init handlers with the formula"
   (setup-handlers rabbit-formula))
 
 (defn destroy []
-  "Gets called from core/destroy on exit"
   (close-handlers rabbit-formula))
