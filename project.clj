@@ -21,21 +21,15 @@
   :license {:name "GNU Affero General Public License"
             :url "https://www.gnu.org/licenses/agpl"}
   :dependencies [[cheshire "5.3.1"]
-                 [com.novemberain/langohr "2.7.1"]
-                 [compojure "1.1.3"]
+                 [com.novemberain/langohr "2.8.2"]
+                 [com.stuartsierra/component "0.2.1"]
+                 [compojure "1.1.6"]
                  [liberator "0.11.0"]
-                 [org.clojure/clojure "1.5.1"]
-                 [ring/ring-core "1.2.1"]
-                 [ring/ring-jetty-adapter "1.2.1"]]
-  :plugins [[lein-ring "0.8.10"]]
-  :ring {
-         :handler akvo.notifications.rest-api/handler
-         :init akvo.notifications.core/init
-         :destroy akvo.notifications.core/destroy
-         :port 3000
-         :auto-reload? true}
+                 [org.clojure/clojure "1.6.0"]
+                 [ring/ring-core "1.2.2"]
+                 [ring/ring-jetty-adapter "1.2.2"]]
   :profiles {:dev {:dependencies [[javax.servlet/servlet-api "2.5"]
-                                  [ring-mock "0.1.5"]
-                                  [midje "1.6.3"]]}}
-  :main akvo.notifications.core
-  :aot [akvo.notifications.core])
+                                  [org.clojure/tools.namespace "0.2.4"]
+                                  [ring-mock "0.1.5"]]
+                   :source-paths ["dev"]}}
+  :main akvo.notifications.main)
