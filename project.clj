@@ -28,8 +28,7 @@
                  [org.clojure/clojure "1.6.0"]
                  [ring/ring-core "1.2.2"]
                  [ring/ring-jetty-adapter "1.2.2"]]
-  :profiles {:dev {:dependencies [[javax.servlet/servlet-api "2.5"]
-                                  [org.clojure/tools.namespace "0.2.4"]
+  :profiles {:dev {:dependencies [[org.clojure/tools.namespace "0.2.4"]
                                   [ring-mock "0.1.5"]]
                    :source-paths ["dev"]}}
   :main akvo.notifications.main)
