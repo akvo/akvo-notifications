@@ -37,11 +37,11 @@ Often user/go, user/stop & user/reset will be used. But if user/reset don't succ
 Using Emacs & Cider a typical workflow is:
 
 ```emacs
-> cider-jack-in
+M x cider-jack-in
 > (user/go)
-> make changes...
+make changes...
 > (user/reset)
-> make changes...
+make changes...
 > (user/reset)
 > (user/stop)
 ```
