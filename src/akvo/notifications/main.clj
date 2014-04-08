@@ -22,15 +22,14 @@
   (:require [com.stuartsierra.component :as component]
             [akvo.notifications.systems :as systems]))
 
-
 ;; Main needs work, should get ports/host and other confs for all things that
 ;; needs it.
 ;; (Integer. (or port (System/getenv "PORT") 3000))
 
 (defn -main [& args]
   (-> {:api-port 3000
-       :ds-host "localhost"
-       :ds-port "5002"
+       :ds-host  "localhost"
+       :ds-port  "5002"
        :ms-queue "akvo.service-events"}
       systems/dev-system
       component/start))

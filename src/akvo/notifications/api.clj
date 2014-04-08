@@ -33,7 +33,6 @@
    [compojure.route :as route]
    [ring.adapter.jetty :as jetty]))
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Map
 

@@ -67,24 +67,18 @@
 (defmethod handle-malformed "application/json"
   [ctx]
   (ring-response
-   {:body (cheshire/generate-string {:reason (:body-error ctx "malformed")})
+   {:body    (cheshire/generate-string {:reason (:body-error ctx "malformed")})
     :headers {"Content-Type" "application/json"}
-    :status 400}))
+    :status  400}))
 (defmethod handle-malformed "application/edn"
   [ctx]
   (ring-response
-   {:body (pr-str {:reason (:body-error ctx "malformed")})
+   {:body    (pr-str {:reason (:body-error ctx "malformed")})
     :headers {"Content-Type" "application/edn"}
-    :status 400}))
+    :status  400}))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; processable?
-
-;; (defn processable?
-;;   [ctx validator]
-;;   (try
-;;     (validator (:request-body ctx))
-;;     (catch AssertionError e false)))
 
 (defn processable?
   [validator ctx]

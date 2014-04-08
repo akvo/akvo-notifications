@@ -91,7 +91,7 @@
   (let [id (inc (count old-services))]
     {:id id
      :name name
-     :links [{:rel "self"
+     :links [{:rel  "self"
               :href (format "/services/%s" id)}]}))
 
 (defn add-service
