@@ -1,6 +1,6 @@
 # Akvo notifications
 
-**Very early work in progress!!**
+**Very early work in progress!**
 
 The job of the notification service is to react on events from services
 and make those events into notifications based on users. One could argue
@@ -23,9 +23,11 @@ When running the REST:ish API is available at [localhost:3000](http://localhost:
 
 ### Leiningen
 To run the application issue:
+
 ```bash
 $ lein run
-´´´
+```
+
 
 ### REPL
 The project is setup to follow ["Reloading"](https://github.com/stuartsierra/component/blob/2e66fb8ad9054e490f4f3e26398a536a05fb3a66/README.md#reloading) workflow. So easiest is to fire up a REPL and then use the convenience functions defined in dev/user.clj.
@@ -33,6 +35,7 @@ The project is setup to follow ["Reloading"](https://github.com/stuartsierra/com
 Often user/go, user/stop & user/reset will be used. But if user/reset don't succed we will need to refresh with clojure.tools.namespace.repl/refresh. This since the convenience functions will not be available in the repl.
 
 Using Emacs & Cider a typical workflow is:
+
 ```emacs
 > cider-jack-in
 > (user/go)
@@ -41,7 +44,7 @@ Using Emacs & Cider a typical workflow is:
 > make changes...
 > (user/reset)
 > (user/stop)
-´´´
+```
 
 ### RabbitMQ
 At this point Akvo-notifications require a running RabbitMQ to be able
