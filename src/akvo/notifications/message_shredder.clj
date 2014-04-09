@@ -19,6 +19,7 @@
   services and send of to the datastore."}
   akvo.notifications.message-shredder
   (:require
+   [akvo.notifications.datastore-mem :as ds]
    [com.stuartsierra.component :refer (Lifecycle)]
    [clojure.pprint :refer (pprint)]
    [langohr.core :as rmq]
@@ -28,17 +29,13 @@
    [langohr.basic :as lb]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Handler
+;;; Private API
 
-(defn simple-handler
-  [ch meta ^bytes payload]
-  (println (format "[consumer] got message: %s" (String. payload "UTF-8"))))
-
-(defn setup-handler
+(defn- setup-handler
   [channel connection handler queue]
   (println "Setting up handler")
   (lq/declare channel queue :exclusive false :auto-delete false)
-  (lc/subscribe channel queue handler :auto-ack false))
+  (lc/subscribe channel queue handler :auto-ack false :db "memory"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Message Shredder component
@@ -51,9 +48,13 @@
       (let [conn (rmq/connect)
             chan (lch/open conn)]
         (println "; Turtles take care, spawning the message shredder")
-        (setup-handler chan conn simple-handler queue)
-        (pprint conn)
-        (pprint chan)
+        (setup-handler
+         chan conn (fn
+                     [ch meta ^bytes payload]
+                     (newline)
+                     (println (format "Got message of type: %s" (:type meta)))
+                     (ds/new-event (:ds this) (String. payload "UTF-8"))
+                     ) queue)
         (assoc this :connection conn :channel chan))
       this))
 
@@ -74,19 +75,29 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; REPL play
 
-;; (def ^{:const true} default-exchange-name "")
+(def ^{:const true} default-exchange-name "")
 
-;; (def rabbit-formula
-;;   ^{:doc "To be passed around"}
-;;   (let [connection (rmq/connect)
-;;         channel    (lch/open connection)
-;;         queue      "akvo.service-events"]
-;;     {:conn connection :ch channel :qname queue}))
+(def rabbit-formula
+  (let [conn  (rmq/connect)
+        chan  (lch/open conn)
+        queue "akvo.service-events"]
+    {:connection conn :channel chan :queue queue}))
 
-;; (defn send-simple-message
-;;   "Simple client example"
-;;   [{:keys [ch qname]}]
-;;   (lb/publish ch default-exchange-name qname "Haj from Clojure"
-;;               :content-type "text/plain" :type "test.hi"))
+(defn send-simple-message
+  "Simple client example"
+  [{:keys [channel queue]}]
+  (lq/declare channel queue :exclusive false :auto-delete false)
+  (lb/publish channel default-exchange-name queue "Haj from Clojure"
+              :content-type "text/plain" :type "clojure.test"))
 
-                                        ; (send-simple-message rabbit-formula)
+(defn publish-message
+  [message]
+  (let [con      (rmq/connect)
+        chan     (lch/open con)
+        exchange "" ; default-exchange-name
+        queue    "akvo.service-events"]
+    (lq/declare chan queue :exclusive false :auto-delete false)
+    (lb/publish chan exchange queue message
+                :content-type "text/plain" :type "clojure.test")))
+
+                                        ; (publish-message "Haj from Clojure!")

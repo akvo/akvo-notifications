@@ -115,3 +115,7 @@
   [datastore id]
   {:pre [(:users datastore)]}
   ((keyword id) (tuple-vec->id-tuple @(:users datastore))))
+
+(defn new-event
+  [datastore message-payload]
+  (println (format "Should create new event from: [%s]" message-payload)))
