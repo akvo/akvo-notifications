@@ -85,4 +85,4 @@
     (lb/publish chan exchange queue message
                 :content-type "text/plain" :type "clojure.test")))
 
-(publish-message "Haj from Clojure!")
+                                        ; (publish-message "Haj from Clojure!")
