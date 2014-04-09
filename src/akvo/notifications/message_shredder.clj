@@ -75,21 +75,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; REPL play
 
-(def ^{:const true} default-exchange-name "")
-
-(def rabbit-formula
-  (let [conn  (rmq/connect)
-        chan  (lch/open conn)
-        queue "akvo.service-events"]
-    {:connection conn :channel chan :queue queue}))
-
-(defn send-simple-message
-  "Simple client example"
-  [{:keys [channel queue]}]
-  (lq/declare channel queue :exclusive false :auto-delete false)
-  (lb/publish channel default-exchange-name queue "Haj from Clojure"
-              :content-type "text/plain" :type "clojure.test"))
-
 (defn publish-message
   [message]
   (let [con      (rmq/connect)
@@ -100,4 +85,4 @@
     (lb/publish chan exchange queue message
                 :content-type "text/plain" :type "clojure.test")))
 
-                                        ; (publish-message "Haj from Clojure!")
+(publish-message "Haj from Clojure!")
