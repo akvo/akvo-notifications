@@ -48,15 +48,15 @@ make changes...
 
 ### RabbitMQ
 At this point Akvo-notifications require a running RabbitMQ to be able
-to run. On OS X it's trivial to install with brew install rabbitmq. On
-Ubuntu you will need to add Rabbits APT repository, then it's a matter
-of sudo apt-get install rabbitmq-server. On Archlinux erlang also needs
-to be installed so: pacman -S erlang rabbitmq should do the trick
-(untested). More info is available at the
-[RabbitMQ site](https://www.rabbitmq.com/download.html)
+to run:
 
-Once installed Rabbit can be stared with rabbitmq-server. To verify take
-a look at the [web admin ui](http://server-name:15672/) (username:
+* On OS X it's trivial to install with `brew install rabbitmq`
+* On Debian/Ubuntu you will need to add the [APT](https://www.rabbitmq.com/install-debian.html#apt) repository
+
+More info is available at the [RabbitMQ site](https://www.rabbitmq.com/download.html)
+
+Once installed, enable the [Management Plugin](https://www.rabbitmq.com/management.html). To verify,
+start the server with `rabbitmq-server` and take a look at the [web admin ui](http://server-name:15672/) (username:
 guest, password: guest)
 
 ## API
