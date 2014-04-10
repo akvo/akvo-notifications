@@ -1,29 +1,32 @@
-;  Copyright (C) 2014 Stichting Akvo (Akvo Foundation)
-;
-;  This file is part of Akvo Notifications.
-;
-;  Akvo Notifications is free software: you can redistribute it and modify it
-;  under the terms of the GNU Affero General Public License (AGPL) as published
-;  by the Free Software Foundation, either version 3 of the License or any later
-;  version.
-;
-;  Akvo Notifications is distributed in the hope that it will be useful, but
-;  WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-;  FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License
-;  included below for more details.
-;
-;  The full license text can also be seen at
-;  <http://www.gnu.org/licenses/agpl.html>.
+;;  Copyright (C) 2014 Stichting Akvo (Akvo Foundation)
+;;
+;;  This file is part of Akvo Notifications.
+;;
+;;  Akvo Notifications is free software: you can redistribute it and modify it
+;;  under the terms of the GNU Affero General Public License (AGPL) as published
+;;  by the Free Software Foundation, either version 3 of the License or any
+;;  later version.
+;;
+;;  Akvo Notifications is distributed in the hope that it will be useful, but
+;;  WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+;;  or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public
+;;  License included below for more details.
+;;
+;;  The full license text can also be seen at
+;;  <http://www.gnu.org/licenses/agpl.html>.
 
-(ns akvo.notifications.rest-utils
+(ns akvo.notifications.api-utils
   ^{:doc "Handy utils for crafting a Liberator API"}
   (:import [com.fasterxml.jackson.core JsonParseException])
   (:require [cheshire.core :as cheshire]
             [clojure.edn :as edn]
-            [liberator.representation :refer [ring-response]]
-            [liberator.core :refer [by-method]]))
+            [clojure.pprint :refer (pprint)]
+            [liberator.representation :refer (ring-response)]
+            [liberator.core :refer (by-method)]))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Setup
+
 (def available-media-types
   ["application/json" "application/edn"])
 
@@ -36,7 +39,9 @@
   [ctx]
   (slurp (get-in ctx [:request :body])))
 
-;; malformed? -----------------------------------------------------------------
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; malformed?
+
 (defmulti malformed?
   (fn [ctx] (get-in ctx [:request :content-type]))
   :default :unsupported)
@@ -53,22 +58,36 @@
     [false {:request-body (edn/read-string (slurp-body ctx))}]
     (catch RuntimeException e [true {:body-error "Malformed EDN"}])))
 
-;; handle-malformed ------------------------------------------------------------
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; handle-malformed
+
 (defmulti handle-malformed
   (fn [ctx] (get-in ctx [:request :content-type])))
 
 (defmethod handle-malformed "application/json"
   [ctx]
   (ring-response
-   {:body (cheshire/generate-string {:reason (:body-error ctx "malformed")})
+   {:body    (cheshire/generate-string {:reason (:body-error ctx "malformed")})
     :headers {"Content-Type" "application/json"}
-    :status 400}))
+    :status  400}))
 (defmethod handle-malformed "application/edn"
   [ctx]
   (ring-response
-   {:body (pr-str {:reason (:body-error ctx "malformed")})
+   {:body    (pr-str {:reason (:body-error ctx "malformed")})
     :headers {"Content-Type" "application/edn"}
-    :status 400}))
+    :status  400}))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; processable?
+
+(defn processable?
+  [validator ctx]
+  (try
+    (validator ctx)
+    (catch AssertionError e false)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; defaults
 
 (def standard-config
   {:allowed-methods             [:get]
@@ -79,9 +98,3 @@
    :handle-not-acceptable       (:415 error-responses)
    :handle-not-found            (:404 error-responses)
    :handle-unprocessable-entity (:422 error-responses)})
-
-(defn processable?
-  [ctx validator]
-  (try
-    (validator (:request-body ctx))
-    (catch AssertionError e false)))
