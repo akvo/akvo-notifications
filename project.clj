@@ -26,6 +26,7 @@
                  [compojure "1.1.6"]
                  [liberator "0.11.0"]
                  [org.clojure/clojure "1.6.0"]
+                 [org.clojure/tools.cli "0.3.1"]
                  [ring/ring-core "1.2.2"]
                  [ring/ring-jetty-adapter "1.2.2"]]
   :profiles {:dev {:dependencies [[org.clojure/tools.namespace "0.2.4"]

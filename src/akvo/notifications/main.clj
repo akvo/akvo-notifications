@@ -20,16 +20,47 @@
   akvo.notifications.main
   (:gen-class)
   (:require [com.stuartsierra.component :as component]
-            [akvo.notifications.systems :as systems]))
+            [akvo.notifications.systems :as systems]
+            [clojure.string :as string]
+            [clojure.tools.cli :refer (parse-opts)]))
 
-;; Main needs work, should get ports/host and other confs for all things that
-;; needs it.
-;; (Integer. (or port (System/getenv "PORT") 3000))
+(def options
+  [["-ap" "--api-port PORT" "Port number"
+    :default 3000
+    :parse-fn #(Integer/parseInt %)
+    :validate [#(< 0 % 0x10000)]]
+   ["-dh" "--ds-host HOST" "Datastore host"
+    :default "localhost"]
+   ["-dp" "--ds-port PORT" "Datastore port"
+    :default 5002]
+   ["-mq" "--ms-queue QUEUE" "Queue to consume"
+    :default "akvo.service-events"]
+   ["-h" "--help"]])
+
+(defn usage
+  [options-summary]
+  (string/join
+   \newline
+   ["Akvo notifications"
+    ""
+    "Options:"
+    options-summary
+    ""
+    "Copyright (C) 2014 Stichting Akvo (Akvo Foundation)"]))
+
+(defn error-message [errors]
+  (str "Errors while paring the command:\n\n"
+       (string/join \newline errors)))
+
+(defn exit [status message]
+  (println message)
+  (System/exit status))
 
 (defn -main [& args]
-  (-> {:api-port 3000
-       :ds-host  "localhost"
-       :ds-port  "5002"
-       :ms-queue "akvo.service-events"}
-      systems/dev-system
-      component/start))
+  (let [{:keys [options errors summary]} (parse-opts args options)]
+    (cond
+     (:help options)  (exit 0 (usage summary))
+     errors (exit 1 (error-message errors)))
+    (-> options
+        systems/dev-system
+        component/start)))
