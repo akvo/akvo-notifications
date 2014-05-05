@@ -67,9 +67,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; General resources
 
-(defresource ^{:doc "in Root"}
-  root
-
+(defresource root
   standard-config
   :handle-ok api-map)
 
@@ -86,8 +84,7 @@
   standard-config
   :exists? false)
 
-(defresource notif
-  [id]
+(defresource notif [id]
   standard-config
   :exists? false)
 
@@ -108,7 +105,8 @@
                          (get-in ctx [:request-body :name])))]}
   true)
 
-(defresource services-coll
+(defresource
+  services-coll
   standard-config
   :allowed-methods [:get :post]
 
@@ -129,8 +127,7 @@
                                        (request-url (:request ctx))
                                        (::id ctx))}))
 
-(defresource service
-  [id]
+(defresource service [id]
   standard-config
   :exists? (fn [ctx] (not (nil? (ds/service (get-ds ctx) id))))
   :handle-ok (fn [ctx] (ds/service (get-ds ctx) id)))
@@ -144,8 +141,7 @@
   :handle-ok (fn [ctx] (ds/users-coll (get-ds ctx)))
   :processable? (by-method {:get true}))
 
- (defresource user
-   [id]
+ (defresource user [id]
    standard-config
    :exists? (fn [ctx] (not (nil? (ds/user (get-ds ctx) id))))
    :handle-ok (fn [ctx] (ds/user (get-ds ctx) id)))
@@ -153,7 +149,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Construct web app
 
-(defroutes app-routes
+(defroutes ^:private app-routes
   (ANY "/" [] root)
   (ANY "/notifications" [] notif-coll)
   (ANY "/notificaitons/:id" [id] (notif id))
@@ -163,11 +159,15 @@
   (ANY "/users/:id" [id] (user id))
   (ANY "*" [] not-found))
 
-(defn wrap-app-component [f api]
+(defn- wrap-app-component
+  "Helper to make-hander that adds the api to the request"
+  [f api]
   (fn [req]
     (f (assoc req ::api api))))
 
-(defn make-handler [api]
+(defn make-handler
+  "Returns a handler that adds the provided api component to the request."
+  [api]
   (-> app-routes
       (wrap-app-component api)
       (wrap-trace :header :ui))) ; Turn of for production !!!!!!!!!!!!!!!!!!!!
@@ -193,6 +193,5 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Public API
 
-(defn new-api
-  [port]
+(defn new-api [port]
   (map->API {:port port}))
