@@ -36,7 +36,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Map
 
-(def api-map
+(def ^:private api-map
   {:name        "akvo-notifications"
    :description "This API...."
    :supported-media-types available-media-types
@@ -44,7 +44,7 @@
                   :href "/"}]
    :resources   [{:name        "Notifications"
                   :description "User notifications"
-                  :links       [{:rel  "self"
+                  :linnks       [{:rel  "self"
                                  :href "/notifications"}]}
                  {:name        "services"
                   :description "Represents Akvo internal services"
@@ -58,14 +58,18 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Helpers
 
-(defn get-ds [ctx]
+(defn- get-ds
+  "From passed in context get the datastore object."
+  [ctx]
   {:pre [(get-in ctx [:request ::api :ds])]}
   (get-in ctx [:request ::api :ds]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; General resources
 
-(defresource root
+(defresource ^{:doc "in Root"}
+  root
+
   standard-config
   :handle-ok api-map)
 
@@ -96,7 +100,7 @@
   (reduce #(assoc %1 (:name %2) (:id %2)) {} coll))
 
 (defn- services-validator
-  "Validator fuction for adding new services. First "
+  "Validator fuction for adding new services."
   [ctx]
   {:pre [(get-in ctx [:request-body :name])
          (not (contains? (existing-services
@@ -107,15 +111,19 @@
 (defresource services-coll
   standard-config
   :allowed-methods [:get :post]
+
   :handle-ok (fn [ctx] (ds/services-coll (get-ds ctx)))
+
   :processable? (by-method {:get true
                             :post (fn [ctx]
                                     (processable? services-validator ctx))})
+
   :post! (fn [ctx]
            (let [service-name (:name (:request-body ctx))
                  service-id (ds/add-service (get-ds ctx)
                                             service-name)]
              {::id (str service-id)}))
+
   :post-redirect? (fn [ctx]
                     {:location (format "%s/%s"
                                        (request-url (:request ctx))

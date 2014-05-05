@@ -24,7 +24,7 @@
             [clojure.string :as string]
             [clojure.tools.cli :refer (parse-opts)]))
 
-(def options
+(def ^:private options
   [["-ap" "--api-port PORT" "Port number"
     :default 3000
     :parse-fn #(Integer/parseInt %)
@@ -37,7 +37,7 @@
     :default "akvo.service-events"]
    ["-h" "--help"]])
 
-(defn usage
+(defn- usage
   [options-summary]
   (string/join
    \newline
@@ -48,15 +48,20 @@
     ""
     "Copyright (C) 2014 Stichting Akvo (Akvo Foundation)"]))
 
-(defn error-message [errors]
+(defn- error-message [errors]
   (str "Errors while paring the command:\n\n"
        (string/join \newline errors)))
 
-(defn exit [status message]
+(defn- exit
+  "Prints status message and exists."
+  [status message]
   (println message)
   (System/exit status))
 
-(defn -main [& args]
+(defn -main
+  "Starts the application. For now the dev-system is used for all
+  possible scenarios."
+  [& args]
   (let [{:keys [options errors summary]} (parse-opts args options)]
     (cond
      (:help options)  (exit 0 (usage summary))
