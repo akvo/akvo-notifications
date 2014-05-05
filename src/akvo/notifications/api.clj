@@ -36,7 +36,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Map
 
-(def ^:private api-map
+(def api-map
   {:name        "akvo-notifications"
    :description "This API...."
    :supported-media-types available-media-types
@@ -149,7 +149,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Construct web app
 
-(defroutes ^:private app-routes
+(defroutes app-routes
   (ANY "/" [] root)
   (ANY "/notifications" [] notif-coll)
   (ANY "/notificaitons/:id" [id] (notif id))

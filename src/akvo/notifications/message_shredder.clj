@@ -31,7 +31,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Private API
 
-(defn- setup-handler
+(defn setup-handler
   [channel connection handler queue]
   (println "Setting up handler")
   (lq/declare channel queue :exclusive false :auto-delete false)

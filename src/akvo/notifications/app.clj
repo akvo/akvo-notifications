@@ -15,8 +15,7 @@
 ;;  The full license text can also be seen at
 ;;  <http://www.gnu.org/licenses/agpl.html>.
 
-(ns
-  ^{:doc "The top level container component that will rule over it's
+(ns ^{:doc "The top level container component that will rule over it's
   dependencies."}
   akvo.notifications.app
   (:require
