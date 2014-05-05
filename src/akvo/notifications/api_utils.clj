@@ -28,9 +28,10 @@
 ;;; Setup
 
 (def available-media-types
+  "JSON & EDN"
   ["application/json" "application/edn"])
 
-(def error-responses
+(def ^:private error-responses
   {:404 {:reason "Resource not found."}
    :415 (format "We only speak: %s." available-media-types)
    :422 {:reason "Could not process request."}})
@@ -43,6 +44,7 @@
 ;;; malformed?
 
 (defmulti malformed?
+  "General function that verify that JSON and EDN requests are well formed."
   (fn [ctx] (get-in ctx [:request :content-type]))
   :default :unsupported)
 
@@ -62,6 +64,7 @@
 ;;; handle-malformed
 
 (defmulti handle-malformed
+  "General function that provides error messages for JSON and EDN requests."
   (fn [ctx] (get-in ctx [:request :content-type])))
 
 (defmethod handle-malformed "application/json"
@@ -81,6 +84,9 @@
 ;;; processable?
 
 (defn processable?
+  "Function that takes a validator function and a context. The validator
+  function is expexted to either return true or throw an
+  AssertionError. Using :pre makes this simple."
   [validator ctx]
   (try
     (validator ctx)
@@ -90,6 +96,7 @@
 ;;; defaults
 
 (def standard-config
+  "Provides a set of default configs, to be used with liberator routes."
   {:allowed-methods             [:get]
    :available-media-types       available-media-types
    :malformed?                  (by-method {:get false

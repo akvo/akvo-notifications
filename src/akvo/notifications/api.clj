@@ -44,7 +44,7 @@
                   :href "/"}]
    :resources   [{:name        "Notifications"
                   :description "User notifications"
-                  :links       [{:rel  "self"
+                  :linnks       [{:rel  "self"
                                  :href "/notifications"}]}
                  {:name        "services"
                   :description "Represents Akvo internal services"
@@ -58,7 +58,9 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Helpers
 
-(defn get-ds [ctx]
+(defn- get-ds
+  "From passed in context get the datastore object."
+  [ctx]
   {:pre [(get-in ctx [:request ::api :ds])]}
   (get-in ctx [:request ::api :ds]))
 
@@ -82,8 +84,7 @@
   standard-config
   :exists? false)
 
-(defresource notif
-  [id]
+(defresource notif [id]
   standard-config
   :exists? false)
 
@@ -96,7 +97,7 @@
   (reduce #(assoc %1 (:name %2) (:id %2)) {} coll))
 
 (defn- services-validator
-  "Validator fuction for adding new services. First "
+  "Validator fuction for adding new services."
   [ctx]
   {:pre [(get-in ctx [:request-body :name])
          (not (contains? (existing-services
@@ -104,25 +105,29 @@
                          (get-in ctx [:request-body :name])))]}
   true)
 
-(defresource services-coll
+(defresource
+  services-coll
   standard-config
   :allowed-methods [:get :post]
+
   :handle-ok (fn [ctx] (ds/services-coll (get-ds ctx)))
+
   :processable? (by-method {:get true
                             :post (fn [ctx]
                                     (processable? services-validator ctx))})
+
   :post! (fn [ctx]
            (let [service-name (:name (:request-body ctx))
                  service-id (ds/add-service (get-ds ctx)
                                             service-name)]
              {::id (str service-id)}))
+
   :post-redirect? (fn [ctx]
                     {:location (format "%s/%s"
                                        (request-url (:request ctx))
                                        (::id ctx))}))
 
-(defresource service
-  [id]
+(defresource service [id]
   standard-config
   :exists? (fn [ctx] (not (nil? (ds/service (get-ds ctx) id))))
   :handle-ok (fn [ctx] (ds/service (get-ds ctx) id)))
@@ -136,8 +141,7 @@
   :handle-ok (fn [ctx] (ds/users-coll (get-ds ctx)))
   :processable? (by-method {:get true}))
 
- (defresource user
-   [id]
+ (defresource user [id]
    standard-config
    :exists? (fn [ctx] (not (nil? (ds/user (get-ds ctx) id))))
    :handle-ok (fn [ctx] (ds/user (get-ds ctx) id)))
@@ -155,11 +159,15 @@
   (ANY "/users/:id" [id] (user id))
   (ANY "*" [] not-found))
 
-(defn wrap-app-component [f api]
+(defn- wrap-app-component
+  "Helper to make-hander that adds the api to the request"
+  [f api]
   (fn [req]
     (f (assoc req ::api api))))
 
-(defn make-handler [api]
+(defn make-handler
+  "Returns a handler that adds the provided api component to the request."
+  [api]
   (-> app-routes
       (wrap-app-component api)
       (wrap-trace :header :ui))) ; Turn of for production !!!!!!!!!!!!!!!!!!!!
@@ -185,6 +193,5 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Public API
 
-(defn new-api
-  [port]
+(defn new-api [port]
   (map->API {:port port}))

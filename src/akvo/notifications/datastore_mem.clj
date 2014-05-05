@@ -49,6 +49,10 @@
 ;;; Helpers
 
 (defn tuple-vec->id-tuple
+  "\"Vector of truples to tuples of id's\"; transforms a vector of
+   tuples into a map with the tuples id as keywords. Example: [{:id 1
+   :name \"Bob} {:id 2 :name \"Jane\"}] -> {:1 {:id :name \"example\"} :2
+   {:id 2 :name \"Jane }}"
   [tuple-vec]
   (if (empty? tuple-vec)
     {}

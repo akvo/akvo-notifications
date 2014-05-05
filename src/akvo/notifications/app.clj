@@ -15,8 +15,8 @@
 ;;  The full license text can also be seen at
 ;;  <http://www.gnu.org/licenses/agpl.html>.
 
-(ns
-  ^{:doc "The container component that will rule over it's dependencies."}
+(ns ^{:doc "The top level container component that will rule over it's
+  dependencies."}
   akvo.notifications.app
   (:require
    [com.stuartsierra.component :refer (Lifecycle)]))
@@ -32,5 +32,7 @@
     (println "; App stopped")
     this))
 
-(defn new-app []
+(defn new-app
+  "Creates a new app component."
+  []
   (map->App {}))
