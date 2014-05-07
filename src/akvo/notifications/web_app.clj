@@ -15,15 +15,15 @@
 ;;  The full license text can also be seen at
 ;;  <http://www.gnu.org/licenses/agpl.html>.
 
-(ns ^{:doc "REST:ish HTTP API for Internal services to consume."}
-  akvo.notifications.api
+(ns ^{:doc "Web app that exposes a REST API"}
+  akvo.notifications.web-app
   (:require
    [akvo.notifications.api-utils :refer (available-media-types
                                          handle-malformed
                                          malformed?
                                          processable?
                                          standard-config)]
-   [akvo.notifications.datastore-mem :as ds]
+   [akvo.notifications.db :as db]
    [com.stuartsierra.component :refer (Lifecycle)]
    [compojure.core :refer (defroutes ANY)]
    [clojure.pprint :refer (pprint)]
@@ -35,9 +35,19 @@
    [taoensso.timbre :refer (info)]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Map
+;;; Helpers
 
-(def api-map
+(defn- get-db
+  "We can grab the database via the webapp set on the request."
+  [ctx]
+  {:pre [(get-in ctx [:request ::webapp :db])]}
+  (get-in ctx [:request ::webapp :db]))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; General resources
+
+(def root-map
   {:name        "akvo-notifications"
    :description "This API...."
    :supported-media-types available-media-types
@@ -56,22 +66,10 @@
                   :links       [{:rel  "self"
                                  :href "/users"}]}]})
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Helpers
-
-(defn- get-ds
-  "From passed in context get the datastore object."
-  [ctx]
-  {:pre [(get-in ctx [:request ::api :ds])]}
-  (get-in ctx [:request ::api :ds]))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; General resources
-
 (defresource root
   standard-config
 
-  :handle-ok api-map)
+  :handle-ok root-map)
 
 (defresource not-found
   standard-config
@@ -82,8 +80,9 @@
 
   :exists? false)
 
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Users
+;;; Event resources
 
 (defresource events-coll
   standard-config
@@ -91,41 +90,21 @@
   :allowed-methods [:get]
 
   :handle-ok
-  (fn [ctx] (ds/events-coll (get-ds ctx)))
+  (fn [ctx] (db/events-coll (get-db ctx)))
 
   :processable?
   (by-method {:get true}))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Notifications
+;;; Services resources
 
-(defresource notif-coll
-  standard-config
-
-  :exists? false)
-
-(defresource notif [id]
-  standard-config
-
-  :exists? false)
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Services
-
-(defn- existing-services
-  "Service validator helper function"
-  [coll]
-  (reduce #(assoc %1 (:name %2) (:id %2)) {} coll)
-  )
-
-(defn- services-validator
-  "Validator fuction for adding new services."
+(defn- create-services-validator
   [ctx]
   {:pre [(get-in ctx [:request-body :name])
-         (not (contains? (existing-services
-                          @(:services (get-ds ctx)))
-                         (get-in ctx [:request-body :name])))]}
+         (db/valid-service-name? (get-in ctx [:request-body :name]))
+         (db/service-exists? (get-db ctx)
+                             (get-in ctx [:request-body :name]))]}
   true)
 
 (defresource services-coll
@@ -134,18 +113,20 @@
   :allowed-methods [:get :post]
 
   :handle-ok
-  (fn [ctx] (ds/list-services (get-ds ctx)))
+  (fn [ctx] (db/services-coll (get-db ctx)))
 
   :processable?
   (by-method {:get true
               :post (fn [ctx]
-                      (processable? services-validator ctx))})
+                      (processable? create-services-validator
+                                    ctx))})
 
   :post!
   (fn [ctx]
     (let [service-name (:name (:request-body ctx))
-          service-id   (ds/create-service (get-ds ctx)
-                                          service-name)]
+          service-id (db/create-service (get-db ctx)
+                                        service-name)]
+      (info "service-id: " service-id)
       {::id (str service-id)}))
 
   :post-redirect?
@@ -158,33 +139,11 @@
   standard-config
 
   :exists?
-  (fn [ctx] (not (nil? (ds/service (get-ds ctx) id))))
+  (fn [ctx] (not (nil? (db/service (get-db ctx) id))))
 
   :handle-ok
-  (fn [ctx] (ds/service (get-ds ctx) id)))
+  (fn [ctx] (db/service (get-db ctx) id)))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Users
-
-(defresource users-coll
-  standard-config
-
-  :allowed-methods [:get]
-
-  :handle-ok
-  (fn [ctx] (ds/users-coll (get-ds ctx)))
-
-  :processable?
-  (by-method {:get true}))
-
- (defresource user [id]
-   standard-config
-
-   :exists?
-   (fn [ctx] (not (nil? (ds/user (get-ds ctx) id))))
-
-   :handle-ok
-   (fn [ctx] (ds/user (get-ds ctx) id)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Construct web app
@@ -192,28 +151,24 @@
 (defroutes app-routes
   (ANY "/" [] root)
   (ANY "/events" [] events-coll)
-  (ANY "/notifications" [] notif-coll)
-  (ANY "/notificaitons/:id" [id] (notif id))
   (ANY "/services" [] services-coll)
   (ANY "/services/:id" [id] (service id))
-  (ANY "/users" [] users-coll)
-  (ANY "/users/:id" [id] (user id))
   (ANY "*" [] not-found))
 
 (defn- wrap-app-component
   "Helper to make-hander that adds the api to the request"
-  [f api]
+  [f webapp]
   (fn [req]
-    (f (assoc req ::api api))))
+    (f (assoc req ::webapp webapp))))
 
 (defn make-handler
   "Returns a handler that adds the provided api component to the request."
-  [api]
+  [webapp]
   (-> app-routes
-      (wrap-app-component api)
-      (wrap-trace :header :ui))) ; Turn of for production !!!!!!!!!!!!!!!!!!!!
+      (wrap-app-component webapp)
+      (wrap-trace :header :ui)))
 
-(defrecord API [port server]
+(defrecord WebApp [port server]
   Lifecycle
 
   (start [this]
@@ -221,18 +176,19 @@
     (if (nil? server)
       (let [jetty (jetty/run-jetty (make-handler this)
                                    {:port port :join? false})]
-        ;; (info "; API Started")
+        (info "; Webapp Started")
         (assoc this :server jetty))
       this))
 
   (stop [this]
     (when server
-      ;; (info "; API Stopped")
+      (info "; WebApp Stopped")
       (.stop server))
     (assoc this :server nil)))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Public API
 
-(defn new-api [port]
-  (map->API {:port port}))
+(defn webapp [port]
+  (map->WebApp {:port port}))

@@ -15,25 +15,25 @@
 ;;  The full license text can also be seen at
 ;;  <http://www.gnu.org/licenses/agpl.html>.
 
-(ns ^{:doc "The top level container component that will rule over it's
-  dependencies."}
-  akvo.notifications.app
+(ns akvo.notifications.test-fixture
   (:require
-   [com.stuartsierra.component :refer (Lifecycle)]
-   [taoensso.timbre :refer (info)]))
+   [akvo.notifications.main :as main]
+   [akvo.notifications.systems :as systems]
+   [clojure.tools.cli :refer (parse-opts)]))
 
-(defrecord App []
-  Lifecycle
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Setup
 
-  (start [this]
-    (info "; App started")
-    this)
+(def test-options (:options (parse-opts []
+                                        main/options)))
 
-  (stop [this]
-    (info "; App stopped")
-    this))
+(def base-url (str "http://localhost:" (:web-port test-options)))
 
-(defn app
-  "Creates a new app component."
-  []
-  (map->App {}))
+(def services-url (str base-url "/services"))
+
+(defn system-fixture [f]
+  (try
+    (main/init systems/dev-system test-options)
+    (main/start)
+    (f)
+    (finally (main/stop))))

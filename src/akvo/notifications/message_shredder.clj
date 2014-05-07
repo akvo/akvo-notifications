@@ -21,46 +21,52 @@
   (:require
    [akvo.notifications.datastore-mem :as ds]
    [com.stuartsierra.component :refer (Lifecycle)]
-   [clojure.pprint :refer (pprint)]
+   [clojure.string :refer (blank?)]
+   [cheshire.core :as cheshire]
    [langohr.core :as rmq]
    [langohr.channel :as lch]
    [langohr.queue :as lq]
    [langohr.consumers :as lc]
-   [langohr.basic :as lb]))
+   [langohr.basic :as lb]
+   [taoensso.timbre :refer (info)]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Private API
 
 (defn setup-handler
-  [channel connection handler queue]
-  (println "Setting up handler")
+  [channel connection queue handler]
+  {:pre [(not (nil? channel))
+         (not (nil? connection))]}
   (lq/declare channel queue :exclusive false :auto-delete false)
-  (lc/subscribe channel queue handler :auto-ack false :db "memory"))
+  (lc/subscribe channel queue handler :auto-ack true))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Message Shredder component
 
-(defrecord MessageShredder [queue connection channel ds]
+(defrecord MessageShredder [queue uri connection channel ds]
   Lifecycle
 
   (start [this]
-    (if (= channel nil)
-      (let [conn (rmq/connect)
-            chan (lch/open conn)]
-        (println "; Turtles take care, spawning the message shredder")
-        (setup-handler
-         chan conn (fn
-                     [ch meta ^bytes payload]
-                     (newline)
-                     (println (format "Got message of type: %s" (:type meta)))
-                     (ds/new-event (:ds this) (String. payload "UTF-8"))
-                     ) queue)
-        (assoc this :connection conn :channel chan))
+    (if (nil? channel)
+      (try
+        (let [conn (rmq/connect {:uri uri})
+              chan (lch/open conn)]
+          ;; (info "; Turtles take care, spawning the message shredder")
+          (setup-handler chan conn queue
+                         (fn [ch meta ^bytes payload]
+                           (ds/handle-message (:ds this)
+                                              meta
+                                              (String. payload "UTF-8"))))
+          (assoc this :connection conn :channel chan))
+        (catch Exception e (do
+                             (println "Can't connect to RabbitMQ")
+                             (println (.getMessage e))
+                             (System/exit 0))))
       this))
 
   (stop [this]
     (when channel
-      (println "; message shredder going down")
+      ;; (info "; message shredder going down")
       (rmq/close channel)
       (rmq/close connection))
     (assoc this :connection nil :channel nil)))
@@ -69,20 +75,58 @@
 ;;; Public API
 
 (defn new-shredder
-  [queue]
-  (map->MessageShredder {:queue queue}))
+  "Creates a new message shredder.  The RabbitMQ vhost is seen as empty
+  is empty or /."
+  [queue-host queue-port queue-user queue-password queue-vhost queue-name]
+  {:pre [(not (nil? queue-name))]}
+  (let [vhost (cond
+               (blank? queue-vhost) "/%2F"
+               (= "/" queue-vhost) "/%2F"
+               :else                queue-vhost)
+        uri (str "amqp://" queue-user ":" queue-password "@"
+                 queue-host ":" queue-port vhost)]
+    (map->MessageShredder {:queue queue-name
+                           :uri uri})))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; REPL play
 
-(defn publish-message
-  [message]
-  (let [con      (rmq/connect)
-        chan     (lch/open con)
-        exchange "" ; default-exchange-name
-        queue    "akvo.service-events"]
+(defn pub-edn-message
+  [raw-message]
+  (let [conn (rmq/connect)
+        chan (lch/open conn)
+        exchange ""
+        queue "notif.services-events"
+        message (pr-str raw-message)]
     (lq/declare chan queue :exclusive false :auto-delete false)
     (lb/publish chan exchange queue message
-                :content-type "text/plain" :type "clojure.test")))
+                :content-type "application/edn"
+                :type "service.subscription")))
 
-                                        ; (publish-message "Haj from Clojure!")
+;; (pub-edn-message {:item "project-42"
+;;                   :item-type :project
+;;                   :service :akvo-rsr
+;;                   :timestamp "25 May"
+;;                   :type :start-subscription
+;;                   :user "bob@akvo.dev"})
+
+(defn pub-json-message
+  [raw-message]
+  (let [conn (rmq/connect)
+        chan (lch/open conn)
+        exchange ""
+        queue "notif.services-events"
+        message (cheshire/generate-string raw-message)]
+    (lq/declare chan queue :exclusive false :auto-delete false)
+    (lb/publish chan exchange queue message
+                :content-type "application/json"
+                :type "notif.start-subscription"
+                )))
+
+(pub-json-message {:item "project-47"
+                   :item-type :project
+                   :service :akvo-rsr
+                   :timestamp "12 June"
+                   :created "11 June"
+                   :type :start-subscription
+                   :user "bob@akvo.dev"})

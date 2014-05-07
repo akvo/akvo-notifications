@@ -23,13 +23,14 @@
   :dependencies [[cheshire "5.3.1"]
                  [com.novemberain/langohr "2.8.2"]
                  [com.stuartsierra/component "0.2.1"]
+                 [com.taoensso/timbre "3.1.6"]
                  [compojure "1.1.6"]
                  [liberator "0.11.0"]
                  [org.clojure/clojure "1.6.0"]
                  [org.clojure/tools.cli "0.3.1"]
                  [ring/ring-core "1.2.2"]
                  [ring/ring-jetty-adapter "1.2.2"]]
-  :profiles {:dev {:dependencies [[org.clojure/tools.namespace "0.2.4"]
-                                  [ring-mock "0.1.5"]]
+  :profiles {:dev {:dependencies [[clj-http "0.9.1"]
+                                  [org.clojure/tools.namespace "0.2.4"]]
                    :source-paths ["dev"]}}
   :main akvo.notifications.main)

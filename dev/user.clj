@@ -29,24 +29,19 @@
    [clojure.string :as str]
    [clojure.test :as test]
    [clojure.tools.namespace.repl :refer (refresh refresh-all)]
+   [clojure.tools.cli :refer (parse-opts)]
    [com.stuartsierra.component :as component]
-   [akvo.notifications.systems :refer (dev-system)]))
-
-(def system nil)
+   [akvo.notifications.systems :refer (dev-system)]
+   [akvo.notifications.main :as main]))
 
 (defn init []
-  (alter-var-root #'system
-                  (constantly (dev-system {:api-port 3000
-                                           :ds-host "localhost"
-                                           :ds-port "5002"
-                                           :ms-queue "akvo.service-events"}))))
+  (main/init dev-system (:options (parse-opts [] main/options))))
 
 (defn start []
-  (alter-var-root #'system component/start))
+  (main/start))
 
 (defn stop []
-  (alter-var-root #'system
-                  (fn [s] (when s (component/stop s)))))
+  (main/stop))
 
 (defn go []
   (init)

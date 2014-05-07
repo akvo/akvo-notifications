@@ -17,9 +17,13 @@
 
 (ns ^{:doc "Simple in memory datastore that uses fixture data"}
   akvo.notifications.datastore-mem
+  (:import [com.fasterxml.jackson.core JsonParseException])
   (:require
+   [cheshire.core :as cheshire]
+   [clojure.edn :as edn]
+   [clojure.pprint :refer (pprint)]
    [com.stuartsierra.component :refer (Lifecycle)]
-   [clojure.pprint :refer (pprint)]))
+   [taoensso.timbre :refer (info)]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Fixture data
@@ -34,11 +38,13 @@
 
 (def users-data
   (atom [{:id    1
-          :name  "Bob"
+          :name  "Bob Example"
+          :email "bob@akvo.dev"
           :links [{:rel "self"
                    :href "/users/1"}]}
          {:id    2
-          :name  "Jane"
+          :name  "Jane Example"
+          :email "jane@akvo.dev"
           :links [{:rel "self"
                    :href "/users/1"}]}]))
 
@@ -46,7 +52,7 @@
   (atom []))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Helpers
+;;; Utility
 
 (defn tuple-vec->id-tuple
   "\"Vector of truples to tuples of id's\"; transforms a vector of
@@ -65,11 +71,11 @@
   Lifecycle
 
   (start [this]
-    (println "; Starting memory datastore...")
+    ;; (info "\n; Starting memory datastore..")
     (assoc this :data data))
 
   (stop [this]
-    (println "; Stopping memory datastore...")
+    ;; (info "\n; Stopping memory datastore...")
     (assoc this :data {})))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -85,29 +91,78 @@
 (defn port [datastore]
   (:port datastore))
 
-(defn services-coll
-  "Return all services"
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Events
+
+;; (defn- new-event
+;;   [old-events event]
+;;   (let [id (inc (count old-events))]
+;;     {:id id
+;;      :content event}))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Events
+
+(defn events-coll
+  "Returns all users"
+  [datastore]
+  {:pre [(:events datastore)]}
+  @(:events datastore))
+
+;; (defn create-event
+;;   [datastore event]
+;;   {:pre [(not (nil? datastore))
+;;          (not (nil? event))]}
+;;   (let [old (:events datastore)
+;;         new (swap! old conj (new-event @old event))]))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Services-
+
+(defn- new-service
+  "Private helper that creates a new service in a transaction"
+  [old-services name]
+  (let [id (inc (count old-services))]
+    {:id    id
+     :name  name
+     :links [{:rel  "self"
+              :href (format "/services/%s" id)}]}))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Services
+
+(defn list-services
+  "Return the services collection"
   [datastore]
   {:pre [(:services datastore)]}
   @(:services datastore))
 
-(defn new-service [old-services name]
-  (let [id (inc (count old-services))]
-    {:id id
-     :name name
-     :links [{:rel  "self"
-              :href (format "/services/%s" id)}]}))
+(defn service
+  "Returns a single service"
+  [datastore id]
+  {:pre [(:services datastore)]}
+  ((keyword id) (tuple-vec->id-tuple @(:services datastore))))
 
-(defn add-service
+(defn create-service
+  "Creates a new service and returns the new id"
   [datastore new-name]
+  {:pre [(not (nil? datastore))
+         (.startsWith new-name "akvo-")]}
   (let [old (:services datastore)
         new (swap! old conj (new-service @old new-name))]
     (count new)))
 
-(defn service
-  [datastore id]
-  {:pre [(:services datastore)]}
-  ((keyword id) (tuple-vec->id-tuple @(:services datastore))))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Users-
+
+(defn- user-by-id [db id]
+  {:pre [(:users db)
+         (integer? id)]}
+  ((keyword id) (tuple-vec->id-tuple @(:users db))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Users
 
 (defn users-coll
   "Returns all users"
@@ -120,6 +175,59 @@
   {:pre [(:users datastore)]}
   ((keyword id) (tuple-vec->id-tuple @(:users datastore))))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Events
+
+(defmulti process-message
+  "..."
+  (fn [message meta] (:content-type meta))
+  :default :unsupported)
+
+(defmethod process-message :unsupported [message meta]
+  (info "Got unprocessable message" meta message))
+
+(defmethod process-message "application/json"
+  [message meta]
+  (try
+    (cheshire/parse-string message true)
+    (catch JsonParseException e (info "Could not parse message of type: "
+                                      (:content-type meta)
+                                      "\nMessage: " message))))
+
+(defmethod process-message "application/edn"
+  [message meta]
+  (try
+    (edn/read-string message)
+    (catch RuntimeException e (info "Coudl not parse message of type: "
+                                    (:content-type meta)
+                                    "\nMessage: " message))))
+
 (defn new-event
-  [datastore message-payload]
-  (println (format "Should create new event from: [%s]" message-payload)))
+  [old-events message]
+  {:pre [(not (nil? (:item message)))
+         (not (nil? (:item-type message)))
+         (not (nil? (:service message)))
+         (not (nil? (:timestamp message)))
+         (not (nil? (:type message)))
+         (not (nil? (:user message)))]}
+  {:id (inc (count old-events))
+   :item (:item message)
+   :item-type (:item-type message)
+   :service (:service message)
+   :timestamp (:timestamp message)
+   :type (:type message)
+   :user (:user message)})
+
+(defn create-event
+  [datastore message]
+  (let [old-events (:events datastore)
+        new-events (swap! old-events conj (new-event @old-events message))]
+    (info "\nStored new event: " (last new-events))))
+
+(defn handle-message
+  [datastore message meta]
+  {:pre [(not (nil? datastore))
+         (not (nil? meta))
+         (not (nil? message))]}
+  (if-let [body (process-message meta message)]
+    (create-event datastore body)))
