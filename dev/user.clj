@@ -31,8 +31,49 @@
    [clojure.tools.namespace.repl :refer (refresh refresh-all)]
    [clojure.tools.cli :refer (parse-opts)]
    [com.stuartsierra.component :as component]
+   [cheshire.core :as cheshire]
+   [langohr.core :as rmq]
+   [langohr.channel :as lch]
+   [langohr.queue :as lq]
+   [langohr.basic :as lb]
    [akvo.notifications.systems :refer (dev-system)]
    [akvo.notifications.main :as main]))
+
+
+(defn pub-message
+  [event message-type]
+  (let [conn (rmq/connect)
+        chan (lch/open conn)
+        exchange ""
+        queue "notif.services-events"
+        message (cheshire/generate-string event)]
+    (lq/declare chan queue :exclusive false :auto-delete false)
+    (lb/publish chan exchange queue message
+                :content-type "application/json"
+                :type message-type)))
+
+;; (pub-message {:service "akvo-dash"
+;;               :item    "project-3"
+;;               :user    "4"
+;;               :creaded "13 June"}
+;;              "notif.start-subscription")
+
+;; (pub-message {:service "akvo-dash"
+;;               :item    "project-2"
+;;               :user    "2"
+;;               :creaded "13 June"}
+;;              "notif.end-subscription")
+
+
+;; (pub-message {:service  "akvo-rsr"
+;;               :item     "project-2"
+;;               :currency "eur"
+;;               :amount   "123"
+;;               :created  "13 June"}
+;;              "notif.project-donation")
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Life cycle
 
 (defn init []
   (main/init dev-system (:options (parse-opts [] main/options))))

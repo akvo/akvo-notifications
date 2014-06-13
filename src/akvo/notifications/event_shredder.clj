@@ -34,11 +34,13 @@
   "We pass on the event to the queue. It's important to carry on
   appropriate meta data."
   [meta event]
+  ;; (println "shredding new event on queue")
   (let [conn (rmq/connect)
         chan (lch/open conn)
         exchange ""
         queue "notif.event-queue"
         message (cheshire/generate-string event)]
+    (pprint message)
     (lq/declare chan queue :exclusive false :auto-delete false)
     (lb/publish chan exchange queue message
                 :content-type (:content-type meta)

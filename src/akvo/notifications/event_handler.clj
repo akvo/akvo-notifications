@@ -26,30 +26,48 @@
    [langohr.queue :as lq]
    [taoensso.timbre :refer (info)]
    [akvo.notifications.db :as db]
-   [akvo.notifications.utils :refer (setup-handler vhost)]))
+   [akvo.notifications.utils :refer (read-message setup-handler vhost)]))
 
+(defn get-user-id
+  [identifier] ; email?
+  identifier)
 
 (defmulti handle-event
   "Dispatch event processing by type. Using the AMQP meta field intead
   of an internal type will make it easier to migrate to a stricter
   serialization format if wanted."
-  (fn [db meta event] (:type meta)) :default :unsupported)
+  (fn [db meta message] (:type meta)) :default :unsupported)
 
-(defmethod handle-event :unsupported [db meta event]
-  (info "\nGot unsuported message type\n" meta "\n" event))
+(defmethod handle-event :unsupported [db meta message]
+  (info "\nGot unsuported message type\n" meta "\n" message))
 
 (defmethod handle-event "notif.start-subscription"
-  [db meta event]
-  (pprint event)
-  (db/start-subscription db :akvo-rsr :project-66 :4))
+  [db meta message]
+  (info "Handle notif.start-subscription")
+  (let [event   (read-message meta message)
+        service (:service event)
+        item    (:item event)
+        user    (get-user-id (:user event))]
+    (db/start-subscription db service item user)))
 
 (defmethod handle-event "notif.end-subscription"
-  [db meta event]
-  (println "end subscription"))
+  [db meta message]
+  (info "Handle notif.end-subscription")
+  (let [event   (read-message meta message)
+        service (:service event)
+        item    (:item event)
+        user    (get-user-id (:user event))]
+    (db/end-subscription db service item user)))
 
-(defmethod handle-event "notif.service-action"
-  [db meta event]
-  (println "service action"))
+(defmethod handle-event "notif.project-donation"
+  [db meta message]
+  (info "Handle notif.project-donation")
+  (let [event    (read-message meta message)
+        service  (:service event)
+        item     (:item event)
+        amount   (:amount event)
+        currency (:currency event)]
+    (db/project-donate db service item amount currency)))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -65,9 +83,11 @@
               chan (lch/open conn)]
           (setup-handler chan conn queue
                          (fn [ch meta ^bytes payload]
-                           (handle-event (:db this)
-                                         meta
-                                         (String. payload "UTF-8"))))
+                           (try
+                             (handle-event (:db this)
+                                           meta
+                                           (String. payload "UTF-8"))
+                             (catch AssertionError e (info "Got error: " e)))))
         (assoc this :connection conn :channel chan))
         (catch Exception e (do
                              (println "Can't connect to RabbitMQ")

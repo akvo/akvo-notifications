@@ -18,20 +18,20 @@
 (ns ^{:doc "Web app that exposes a REST API"}
   akvo.notifications.web-app
   (:require
-   [akvo.notifications.api-utils :refer (available-media-types
+   [akvo.notifications.db :as db]
+   [akvo.notifications.utils :refer (available-media-types
                                          handle-malformed
                                          malformed?
                                          processable?
                                          standard-config)]
-   [akvo.notifications.db :as db]
+   [clojure.pprint :refer (pprint)]
    [com.stuartsierra.component :refer (Lifecycle)]
    [compojure.core :refer (defroutes ANY)]
-   [clojure.pprint :refer (pprint)]
-   [ring.util.request :refer (request-url)]
+   [compojure.route :as route]
    [liberator.core :refer (defresource by-method)]
    [liberator.dev :refer (wrap-trace)]
-   [compojure.route :as route]
    [ring.adapter.jetty :as jetty]
+   [ring.util.request :refer (request-url)]
    [taoensso.timbre :refer (info)]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -103,8 +103,8 @@
   [ctx]
   {:pre [(get-in ctx [:request-body :name])
          (db/valid-service-name? (get-in ctx [:request-body :name]))
-         (db/service-exists? (get-db ctx)
-                             (get-in ctx [:request-body :name]))]}
+         (not (db/service-exists? (get-db ctx)
+                                  (get-in ctx [:request-body :name])))]}
   true)
 
 (defresource services-coll
@@ -146,6 +146,32 @@
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Users resources
+
+(defresource users-coll
+  standard-config
+
+  :allowed-methods [:get]
+
+  :handle-ok
+  (fn [ctx] (db/users-coll (get-db ctx)))
+
+  :processable?
+  (by-method {:get true}))
+
+(defresource user [id]
+  standard-config
+
+  :exists?
+  (fn [ctx] (not (nil? (db/user (get-db ctx)
+                               id))))
+
+  :handle-ok
+  (fn [ctx] (db/user (get-db ctx)
+                    id)))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Construct web app
 
 (defroutes app-routes
@@ -153,6 +179,8 @@
   (ANY "/events" [] events-coll)
   (ANY "/services" [] services-coll)
   (ANY "/services/:id" [id] (service id))
+  (ANY "/users" [] users-coll)
+  (ANY "/users/:id" [id] (user id))
   (ANY "*" [] not-found))
 
 (defn- wrap-app-component

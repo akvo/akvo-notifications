@@ -17,15 +17,12 @@
 
 (ns akvo.notifications.systems
   (:require
-   [akvo.notifications.api :as api]
    [akvo.notifications.app :refer (app)]
-   [akvo.notifications.datastore-mem :as ds-mem]
-   [akvo.notifications.store-mem :refer (store)]
    [akvo.notifications.db :refer (db)]
-   [akvo.notifications.web-app :refer (webapp)]
-   [akvo.notifications.event-shredder :refer (event-shredder)]
    [akvo.notifications.event-handler :refer (event-handler)]
-   [akvo.notifications.message-shredder :as ms]
+   [akvo.notifications.event-shredder :refer (event-shredder)]
+   [akvo.notifications.store-mem :refer (store)]
+   [akvo.notifications.web-app :refer (webapp)]
    [com.stuartsierra.component :refer (system-map using)]))
 
 (defn dev-system
@@ -57,18 +54,4 @@
                  {:db :db})
      :app (using (app)
                  {:es :es
-                  :event-handler :event-handler})
-     ;; :ds (ds-mem/new-datastore data-host data-port)
-     ;; :ms (using (ms/new-shredder queue-host
-     ;;                             queue-port
-     ;;                             queue-user
-     ;;                             queue-password
-     ;;                             queue-vhost
-     ;;                             queue-name)
-     ;;            {:ds :ds})
-     ;; :api (using (api/new-api web-port)
-     ;;             {:ds :ds})
-     ;; :app (using (app/new-app)
-     ;;             {:api :api
-     ;;              :ms  :ms})
-     )))
+                  :event-handler :event-handler}))))

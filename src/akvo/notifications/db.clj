@@ -53,7 +53,8 @@ for the "}
 
 (defn end-subscription
   [db service item who]
-  (println "end subscription..."))
+  (let [fn (symbol (:backend db) "end-subscription")]
+    ((resolve fn) (:store db) service item who)))
 
 (defn service-action
   [db service item what]
@@ -76,6 +77,22 @@ for the "}
   (let [fn (symbol (:backend db) "events-coll")]
     ((resolve fn) (:store db))))
 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Users
+
+(defn users-coll
+  "Returns the user collection."
+  [db]
+  (let [fn (symbol (:backend db) "users-coll")]
+    ((resolve fn) (:store db))))
+
+
+(defn user
+  "Returns the user collection."
+  [db id]
+  (let [fn (symbol (:backend db) "user")]
+    ((resolve fn) (:store db) id)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Services
@@ -113,3 +130,13 @@ for the "}
   "Validates the provided service name against the defined rules."
   [service-name]
   (.startsWith service-name "akvo-"))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Project donations
+
+(defn project-donate
+  [db service item amount currency]
+  "Adds a donation to the item."
+  (let [fn (symbol (:backend db) "project-donate")]
+    ((resolve fn) (:store db) service item amount currency)))

@@ -19,6 +19,7 @@
   akvo.notifications.store-mem
   (:require
    [clojure.pprint :refer (pprint)]
+   [clojure.set :refer (union)]
    [com.stuartsierra.component :refer (Lifecycle)]
    [taoensso.timbre :refer (info)]))
 
@@ -36,13 +37,20 @@
   (ref {:services {}
         :subscribers {}}))
 
-;; (def subscriptions-data
-;;   {:services {}
-;;    :subscribers {}})
+(def users-data
+  (atom [{:id           1
+          :qualified-id :akvo-dash-23
+          :name         "Jane Example"
+          :email        "jane@kardans.com"
+          :service      :akvo-dash
+          :settings     {:email false}}
+         {:id           2
+          :qualified-id :akvo-rsr-4
+          :name         "Bob Example"
+          :email        "bob@kardans.com"
+          :service      :akvo-rsr
+          :settings     {:email false}}]))
 
-;; (def subscriptions-data
-;;   (atom {:services    {}
-;;          :subscribers {}}))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Utility
@@ -79,7 +87,8 @@
 (defn store []
   (map->MemStorage {:events        events-data
                     :services      services-data
-                    :subscriptions subscriptions-data}))
+                    :subscriptions subscriptions-data
+                    :users         users-data}))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Events
@@ -97,6 +106,19 @@
 (defn events-coll
   [data]
   @(:events data))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Users
+
+(defn users-coll
+  "Returns all users"
+  [data]
+  @(:users data))
+
+(defn user
+  [data id]
+  ((keyword id) (tuple-vec->id-tuple @(:users data))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Services
@@ -130,42 +152,70 @@
 
 (defn service-exists?
   [data service]
-  (not (contains? (existing-services @(:services data))
-                  service)))
+  (contains? (existing-services @(:services data))
+             service))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Subscriptions
 
-;; (defn subscribe-user-to-item
-;;   [data service item who]
-;;   (println "Subscribing user to item")
-;;   (assoc-in data [:services service item]
-;;             (conj (get-in data [:services service item]) who)))
-
-;; (defn subscribe-item-to-user
-;;   [data service item who]
-;;   (println "Subscribing item to user")
-;;   (assoc-in data [:subscribers who service]
-;;             (conj (get-in data [:subscribers who service]) item)))
+;;; Start
 
 (defn subscribe-user-to-item
+  "Adds an user to an item"
   [subscriptions service item who]
-  (println "Subscribing user to item")
   (alter subscriptions assoc-in [:services service item]
-         (conj (get-in subscriptions [:services service item]) who)))
+         (union (get-in @subscriptions [:services service item]) #{who})))
 
 (defn subscribe-item-to-user
+  "Adds an item to a user"
   [subscriptions service item who]
-  (println "Subscribing item to user")
   (alter subscriptions assoc-in [:subscribers who service]
-         (conj (get-in subscriptions [:subscribers who service]) item)))
+         (union (get-in @subscriptions [:subscribers who service]) #{item})))
 
 (defn start-subscription
+  "Subscriptions consists of two data structures. Service/item->who
+  who->service/item They are updated in a transaction."
   [data service item who]
-  {:pre [(service-exists? data service)]} ; service keyword?
-  (println "\nstarting a new subscription")
-  (dosync
-   (subscribe-user-to-item (:subscriptions data) service item who)
-   (subscribe-item-to-user (:subscriptions data) service item who))
-  (pprint data))
+  {:pre [(service-exists? data (name service))]}
+  (println "\nstart-subscription")
+  (let [s (keyword service)
+        i (keyword item)
+        w (keyword who)]
+    (dosync
+     (subscribe-user-to-item (:subscriptions data) s i w)
+     (subscribe-item-to-user (:subscriptions data) s i w)))
+  (pprint (:subscriptions data))
+  )
+
+;;; End
+
+(defn unsubscribe-user-from-item
+  "Removes an user from an item"
+  [subscriptions service item who]
+  (alter subscriptions assoc-in [:services service item]
+         (disj (get-in @subscriptions [:services service item]) who)))
+
+(defn unsubscribe-item-from-user
+  "Removes an item from an user"
+  [subscriptions service item who]
+  (alter subscriptions assoc-in [:subscribers who service]
+         (disj (get-in @subscriptions [:subscribers who service]) item)))
+
+(defn end-subscription
+  ""
+  [data service item who]
+  (println "\nend-subscription")
+  (let [s (keyword service)
+        i (keyword item)
+        w (keyword who)]
+    (dosync
+     (unsubscribe-user-from-item (:subscriptions data) s i w)
+     (unsubscribe-item-from-user (:subscriptions data) s i w))))
+
+(defn project-donate
+  "With the help of the subscriptions data create notifications for
+  users. "
+  [data service-name item amount currency]
+  ;; Review how to do service exists verifications.
+  (println "Got donation"))
