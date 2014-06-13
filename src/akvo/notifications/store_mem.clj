@@ -32,6 +32,18 @@
 (def services-data
   (atom []))
 
+(def subscriptions-data
+  (ref {:services {}
+        :subscribers {}}))
+
+;; (def subscriptions-data
+;;   {:services {}
+;;    :subscribers {}})
+
+;; (def subscriptions-data
+;;   (atom {:services    {}
+;;          :subscribers {}}))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Utility
 
@@ -65,9 +77,9 @@
 ;;; Public API
 
 (defn store []
-  (map->MemStorage {:events   events-data
-                    :services services-data}))
-
+  (map->MemStorage {:events        events-data
+                    :services      services-data
+                    :subscriptions subscriptions-data}))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Events
@@ -120,3 +132,40 @@
   [data service]
   (not (contains? (existing-services @(:services data))
                   service)))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Subscriptions
+
+;; (defn subscribe-user-to-item
+;;   [data service item who]
+;;   (println "Subscribing user to item")
+;;   (assoc-in data [:services service item]
+;;             (conj (get-in data [:services service item]) who)))
+
+;; (defn subscribe-item-to-user
+;;   [data service item who]
+;;   (println "Subscribing item to user")
+;;   (assoc-in data [:subscribers who service]
+;;             (conj (get-in data [:subscribers who service]) item)))
+
+(defn subscribe-user-to-item
+  [subscriptions service item who]
+  (println "Subscribing user to item")
+  (alter subscriptions assoc-in [:services service item]
+         (conj (get-in subscriptions [:services service item]) who)))
+
+(defn subscribe-item-to-user
+  [subscriptions service item who]
+  (println "Subscribing item to user")
+  (alter subscriptions assoc-in [:subscribers who service]
+         (conj (get-in subscriptions [:subscribers who service]) item)))
+
+(defn start-subscription
+  [data service item who]
+  {:pre [(service-exists? data service)]} ; service keyword?
+  (println "\nstarting a new subscription")
+  (dosync
+   (subscribe-user-to-item (:subscriptions data) service item who)
+   (subscribe-item-to-user (:subscriptions data) service item who))
+  (pprint data))

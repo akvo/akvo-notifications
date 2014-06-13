@@ -128,5 +128,4 @@
                    :service :akvo-rsr
                    :timestamp "12 June"
                    :created "11 June"
-                   :type :start-subscription
                    :user "bob@akvo.dev"})

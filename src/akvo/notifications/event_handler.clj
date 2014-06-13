@@ -40,7 +40,8 @@
 
 (defmethod handle-event "notif.start-subscription"
   [db meta event]
-  (println "start subscription"))
+  (pprint event)
+  (db/start-subscription db :akvo-rsr :project-66 :4))
 
 (defmethod handle-event "notif.end-subscription"
   [db meta event]

@@ -48,7 +48,8 @@ for the "}
 
 (defn start-subscription
   [db service item who]
-  (println "start subscription..."))
+  (let [fn (symbol (:backend db) "start-subscription")]
+    ((resolve fn) (:store db) service item who)))
 
 (defn end-subscription
   [db service item who]
