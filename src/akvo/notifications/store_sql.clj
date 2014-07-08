@@ -15,25 +15,39 @@
 ;;  The full license text can also be seen at
 ;;  <http://www.gnu.org/licenses/agpl.html>.
 
-(ns ^{:doc "The top level container component that will rule over it's
-  dependencies."}
-  akvo.notifications.app
+(ns ^{:doc "SQL storage backend"}
+  akvo.notifications.store-sql
   (:require
+   [clojure.pprint :refer (pprint)]
    [com.stuartsierra.component :refer (Lifecycle)]
    [taoensso.timbre :refer (info)]))
 
-(defrecord App []
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Component
+
+(defrecord SqlStorage []
   Lifecycle
 
   (start [this]
-    (info "; App started")
+    (info "\n Starting SQL storage")
     this)
 
   (stop [this]
-    (info "; App stopped")
+    (info "\n Stopping SQL storage")
     this))
 
-(defn app
-  "Creates a new app component."
-  []
-  (map->App {}))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Public API
+
+(defn store []
+  (map->SqlStorage {}))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Events
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Services

@@ -17,21 +17,41 @@
 
 (ns akvo.notifications.systems
   (:require
-   [akvo.notifications.api :as api]
-   [akvo.notifications.app :as app]
-   [akvo.notifications.datastore-mem :as ds-mem]
-   [akvo.notifications.message-shredder :as ms]
+   [akvo.notifications.app :refer (app)]
+   [akvo.notifications.db :refer (db)]
+   [akvo.notifications.event-handler :refer (event-handler)]
+   [akvo.notifications.event-shredder :refer (event-shredder)]
+   [akvo.notifications.store-mem :refer (store)]
+   [akvo.notifications.web-app :refer (webapp)]
    [com.stuartsierra.component :refer (system-map using)]))
 
 (defn dev-system
   [config-options]
-  (let [{:keys [api-port ds-port ds-host ms-queue]} config-options]
+  (let [{:keys [web-port
+                data-host data-port data-user data-password
+                queue-host queue-port queue-user queue-password queue-vhost
+                queue-name
+                ]} config-options]
     (system-map
-     :ds (ds-mem/new-datastore ds-host ds-port)
-     :ms (using (ms/new-shredder ms-queue)
-                {:ds :ds})
-     :api (using (api/new-api api-port)
-                 {:ds :ds})
-     :app (using (app/new-app)
-                 {:api :api
-                  :ms  :ms}))))
+     :db-store (store)
+     :db (using (db "akvo.notifications.store-mem")
+                {:store :db-store})
+     :es (using (event-shredder queue-host
+                                queue-port
+                                queue-user
+                                queue-password
+                                queue-vhost)
+                {:db :db})
+
+     :event-handler (using (event-handler queue-host
+                                          queue-port
+                                          queue-user
+                                          queue-password
+                                          queue-vhost)
+                           {:db :db})
+
+     :web (using (webapp web-port)
+                 {:db :db})
+     :app (using (app)
+                 {:es :es
+                  :event-handler :event-handler}))))

@@ -18,18 +18,91 @@
 (ns
   ^{:doc "Akvo notificaitons use the Component framework structure."}
   akvo.notifications.main
-  (:gen-class)
-  (:require [com.stuartsierra.component :as component]
-            [akvo.notifications.systems :as systems]))
+  (:require
+   [com.stuartsierra.component :as component]
+   [akvo.notifications.systems :as systems]
+   [clojure.string :as string]
+   [clojure.tools.cli :refer (parse-opts)])
+  (:gen-class))
 
-;; Main needs work, should get ports/host and other confs for all things that
-;; needs it.
-;; (Integer. (or port (System/getenv "PORT") 3000))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; CLI
 
-(defn -main [& args]
-  (-> {:api-port 3000
-       :ds-host  "localhost"
-       :ds-port  "5002"
-       :ms-queue "akvo.service-events"}
-      systems/dev-system
-      component/start))
+(def options
+  [
+   ;; ["-wh" "--web-host HOST" "Web service host"
+   ;;  :default "localhost"]
+   ["-wp" "--web-port PORT" "Web service port"
+    :default 3000
+    :parse-fn #(Integer/parseInt %)
+    :validate [#(< 0 % 0x10000)]]
+   ["-dh" "--data-host HOST" "Datastore host"
+    :default "localhost"]
+   ["-dp" "--data-port PORT" "Datastore port"
+    :default 5002
+    :parse-fn #(Integer/parseInt %)
+    :validate [#(< 0 % 0x10000)]]
+   ["-qh" "--queue-host HOST" "Queue host"
+    :default "localhost"]
+   ["-qp" "--queue-port PORT" "Queue port"
+    :default 5672
+    :parse-fn #(Integer/parseInt %)
+    :validate [#(< 0 % 0x10000)]]
+   ["-qu" "--queue-user USERNAME" "Queue username"
+    :default "guest"]
+   ["-qc" "--queue-password PASSWORD" "Queue password"
+    :default "guest"]
+   ["-qv" "--queue-vhost VHOST" "Queue vhost"
+    :default "/"]
+   ["-qn" "--queue-name QUEUE" "Queue name"
+    :default "notif.service-events"]
+   ["-h" "--help"]])
+
+(defn- usage
+  [options-summary]
+  (string/join
+   \newline
+   ["Akvo notifications"
+    ""
+    "usage: java -jar <path to jar> [options...]"
+    "Options:"
+    options-summary
+    ""
+    "Copyright (C) 2014 Stichting Akvo (Akvo Foundation)"]))
+
+(defn- error-message
+  [errors]
+  (str "Errors while paring the command:\n\n"
+       (string/join \newline errors)))
+
+(defn- exit
+  "Prints status message and exists."
+  [status message]
+  (println message)
+  (System/exit status))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Application lifecycle
+
+(def system nil)
+
+(defn init
+  [s options]
+  (alter-var-root #'system (constantly (s options))))
+
+(defn start []
+  (alter-var-root #'system component/start))
+
+(defn stop []
+  (alter-var-root #'system (fn [s] (when s (component/stop s)))))
+
+(defn -main
+  "Starts the application. For now the dev-system is used for all
+  possible scenarios."
+  [& args]
+  (let [{:keys [options errors summary]} (parse-opts args options)]
+    (cond
+     (:help options)  (exit 0 (usage summary))
+     errors (exit 1 (error-message errors)))
+    (init systems/dev-system options)
+    (start)))

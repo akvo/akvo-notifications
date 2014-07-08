@@ -15,25 +15,25 @@
 ;;  The full license text can also be seen at
 ;;  <http://www.gnu.org/licenses/agpl.html>.
 
-(ns ^{:doc "The top level container component that will rule over it's
-  dependencies."}
-  akvo.notifications.app
-  (:require
-   [com.stuartsierra.component :refer (Lifecycle)]
-   [taoensso.timbre :refer (info)]))
+(ns akvo.notifications.functional-test
+  (:require [akvo.notifications.test-fixture :refer (system-fixture base-url)]
+            [cheshire.core :as cheshire]
+            [clj-http.client :as httpc]
+            [clojure.test :refer :all]))
 
-(defrecord App []
-  Lifecycle
 
-  (start [this]
-    (info "; App started")
-    this)
+(use-fixtures :once system-fixture)
 
-  (stop [this]
-    (info "; App stopped")
-    this))
+(deftest simple
 
-(defn app
-  "Creates a new app component."
-  []
-  (map->App {}))
+  (testing "Ping"
+    (let [resp (httpc/get base-url {:accept "application/edn"})]
+      (is (= (:status resp) 200))))
+
+  (testing "Make sure we have 0 events (using json)"
+    (let [url  (str base-url "/events")
+          resp (httpc/get url {:accept "application/json"})
+          n    (count (cheshire/parse-string (:body resp)))]
+      (is (= (:status resp) 200))
+      ;; (is (= n 0))
+      )))

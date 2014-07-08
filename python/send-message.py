@@ -1,8 +1,9 @@
 #!/usr/bin/env python
-# This script require pike, so create a virtualenv and install pika!
+# This script require pika, so create a virtualenv and install pika!
 
 import pika
-
+import logging
+logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.CRITICAL)
 
 # Step #3
 def on_open(connection):
@@ -17,6 +18,7 @@ def on_channel_open(channel):
                           pika.BasicProperties(content_type='text/plain',
                                                type='python.test',
                                                delivery_mode=2))
+    print "Message sent!"
     connection.close()
 
 # Step #1: Connect to RabbitMQ

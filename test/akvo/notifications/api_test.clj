@@ -16,86 +16,106 @@
 ;;  <http://www.gnu.org/licenses/agpl.html>.
 
 (ns akvo.notifications.api-test
-  (:require [akvo.notifications.api :as api]
-            [clojure.test :refer :all]
-            [clojure.edn :as edn]
-            [ring.mock.request :refer :all]
-            ))
+  (:require
+   [akvo.notifications.api :as api]
+   [akvo.notifications.main :as main]
+   [akvo.notifications.systems :as systems]
+   [akvo.notifications.test-fixture :refer (system-fixture base-url)]
+   [cheshire.core :as cheshire]
+   [clj-http.client :as httpc]
+   [clojure.edn :as edn]
+   [clojure.test :refer :all]
+   [clojure.tools.cli :refer (parse-opts)]))
 
-(deftest root-route
-  (testing "Make sure we get a response"
 
-    (let [response (api/app-routes (-> (request :get "/")
-                                       (header "accept" "application/edn")))]
-      (is (= (:status response) 200))
-      (is (= (edn/read-string (:body response)) api/api-map)))))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Setup
+
+(def services-url (str base-url "/services"))
+(use-fixtures :once system-fixture)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Routes
+
+(deftest root
+  (testing "Supported media types"
+    (let [url       base-url
+          edn-resp  (httpc/get url {:accept "application/edn"})
+          json-resp (httpc/get url {:accept "application/json"})]
+      (is (= (:status edn-resp) 200))
+      (is (= (:status edn-resp) 200))))
+
+  (testing "Typical unsupported media types"
+    (let [url        base-url
+          xml-resp   (httpc/get url
+                                {:accept "application/xml"
+                                 :throw-exceptions false})
+          html-resp  (httpc/get url
+                                {:accept "text/html"
+                                 :throw-exceptions false})
+          plain-resp (httpc/get url
+                                {:accept "text/plain"
+                                 :throw-exceptions false})]
+      (is (= (:status xml-resp) 406))
+      (is (= (:status html-resp) 406))
+      (is (= (:status plain-resp) 406))))
+
+  (testing "API map"
+    (let [url base-url
+          resp (httpc/get url {:accept "application/edn"})]
+      (is (= (edn/read-string (:body resp)) api/api-map)))))
 
 (deftest not-found
-  (testing "A non existing route"
-    (let [response (api/app-routes (request :get "/invalid"))]
-      (is (= (:status response) 404)))))
+  (testing "Not found route with valid media type"
+    (let [url (str base-url "/non-existing")
+          resp (httpc/get url
+                          {:accept "application/edn"
+                           :throw-exceptions false})]
+      (is (= (:status resp) 404))))
 
-(deftest notifications-coll
-  (testing "Make sure we get a 404 response"
-    (let [response (api/app-routes (request :get "/notifications"))]
-      (is (= (:status response) 404)))))
+  (testing "Not found route with non valid media type"
+    (let [url (str base-url "/non-existing")
+          resp (httpc/get url
+                          {:accept "application/xml"
+                           :throw-exceptions false})]
+      (is (= (:status resp) 406)))))
 
-(deftest notifications-single
-  (testing "Make sure we get a 404 response"
-    (let [response (api/app-routes (request :get "/notifications/1"))]
-      (is (= (:status response) 404)))))
+(deftest services-coll
 
-;; We need to deal with the components!
-;;
+  (testing "Make sure we have 2 services (using json)"
+    (let [url  services-url
+          resp (httpc/get url {:accept "application/json"})
+          n    (count (cheshire/parse-string (:body resp)))]
+      (is (= (:status resp) 200))
+      (is (= n 2))))
 
-;; (deftest services-coll
-;;   (testing "Supported media types"
-;;     (let [json-response (api/app-routes
-;;                          (-> (request :get "/services")
-;;                              (header "accept" "application/json")))
-;;           xml-response (api/app-routes
-;;                         (-> (request :get "/services")
-;;                             (header "accept" "application/xml")))]
-;;       (is (= (:status json-response) 200))
-;;       (is (= (:status xml-response) 406)))))
+  (testing "Try to add malformed service (using json)"
+    (let [url  services-url
+          resp (httpc/post url
+                           {:accept :json
+                            :body "{"
+                            :content-type :json
+                            :throw-exceptions false})]
+      (is (= (:status resp) 400))))
 
 
-;; (deftest services-single
-;;   (testing "Make sure we get a 200 response"
-;;     (let [response (api/app-routes (request :get "/services/1"))]
-;;       (is (= (:status response) 200)))))
+  (testing "Try to add unprocessable service (using json)"
+    (let [url  services-url
+          resp (httpc/post url
+                           {:accept :json
+                            :body (cheshire/generate-string {:nam "akvo-dash"})
+                            :content-type :json
+                            :throw-exceptions false})]
+      (is (= (:status resp) 422))))
 
-;; (deftest add-service
-;;   (testing "Make sure we have 2 services"
-;;     (let [response (api/handler (-> (request :get "/services")
-;;                                     (content-type "application/json")))
-;;           n (count (cheshire/parse-string (:body response)))]
-;;       (is (= (:status response) 200))
-;;       (is (= n 2))))
-
-;;   (testing "Try to add malformed service using JSON"
-;;     (let [response (api/handler (-> (request :post "/services")
-;;                                     (body "{")
-;;                                     (content-type "application/json")))]
-;;       (is (= (:status response) 400))))
-
-;;   (testing "Try to add unprocessable service using JSON"
-;;     (let [response (api/handler (-> (request :post "/services")
-;;                                     (body (cheshire/generate-string
-;;                                            {:nam "akvo-dash"}))
-;;                                     (content-type "application/json")))]
-;;       (is (= (:status response) 422))))
-
-;;   (testing "Add new service using JSON"
-;;     (let [response (api/handler (-> (request :post "/services")
-;;                                     (body (cheshire/generate-string
-;;                                            {:name "akvo-dash"}))
-;;                                     (content-type "application/json")))]
-;;       (is (= (:status response) 303))))
-
-;;   (testing "Make sure we have 3 services"
-;;     (let [response (api/handler (-> (request :get "/services")
-;;                                     (content-type "application/json")))
-;;           n (count (cheshire/parse-string (:body response)))]
-;;       (is (= (:status response) 200))
-;;       (is (= n 3)))))
+  (testing "Add new service (using json)"
+    (let [url   services-url
+          body  (cheshire/generate-string {:name "akvo-dash"})
+          resp  (httpc/post url
+                            {:accept       :json
+                             :body         body
+                             :content-type :json})
+          trail (:trace-redirects resp)]
+      (is (= (:status resp) 200))
+      (is (= (first trail) services-url))
+      (is (= (second trail) (str services-url "/3"))))))
