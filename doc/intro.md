@@ -1,3 +1,3 @@
-# Introduction to akvo-notifications
+ # Introduction to akvo-notifications
 
 TODO: write [great documentation](http://jacobian.org/writing/great-documentation/what-to-write/)

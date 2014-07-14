@@ -15,19 +15,24 @@
 ;  The full license text can also be seen at
 ;  <http://www.gnu.org/licenses/agpl.html>.
 
-(defproject akvo-notifications "0.1.0-SNAPSHOT"
+(defproject akvo-notifications "0.4.0-SNAPSHOT"
   :description "Akvo-notifications"
   :url "https://github.com/akvo/akvo-notifications"
   :license {:name "GNU Affero General Public License"
             :url "https://www.gnu.org/licenses/agpl"}
-  :dependencies [[cheshire "5.3.1"]
-                 [com.novemberain/langohr "2.8.2"]
+  :dependencies [[bidi "1.10.4"]
+                 [cheshire "5.3.1"]
+                 [clj-time "0.7.0"]
+                 [com.novemberain/langohr "2.11.0"]
                  [com.stuartsierra/component "0.2.1"]
                  [com.taoensso/timbre "3.1.6"]
-                 [compojure "1.1.6"]
+                 [compojure "1.1.8"]
+                 [http-kit "2.1.18"]
                  [liberator "0.11.0"]
                  [org.clojure/clojure "1.6.0"]
                  [org.clojure/tools.cli "0.3.1"]
+                 [prismatic/plumbing "0.3.2"]
+                 [prismatic/schema "0.2.4"]
                  [ring/ring-core "1.2.2"]
                  [ring/ring-jetty-adapter "1.2.2"]]
   :profiles {:dev {:dependencies [[clj-http "0.9.1"]

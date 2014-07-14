@@ -15,43 +15,64 @@
 ;;  The full license text can also be seen at
 ;;  <http://www.gnu.org/licenses/agpl.html>.
 
-(ns akvo.notifications.systems
-  (:require
-   [akvo.notifications.app :refer (app)]
-   [akvo.notifications.db :refer (db)]
-   [akvo.notifications.event-handler :refer (event-handler)]
-   [akvo.notifications.event-shredder :refer (event-shredder)]
-   [akvo.notifications.store-mem :refer (store)]
-   [akvo.notifications.web-app :refer (webapp)]
-   [com.stuartsierra.component :refer (system-map using)]))
+(ns ^{:doc "Describes systems that is managed via the component framework"}
+  akvo.notifications.systems
+  (:require [akvo.notifications.drafts :refer (drafts)]
+            [akvo.notifications.events :refer (events)]
+            [akvo.notifications.store-mem :refer (store)]
+            [akvo.notifications.web :refer (web)]
+            [com.stuartsierra.component :refer (Lifecycle system-map using)]
+            [taoensso.timbre :refer (info)]))
 
-(defn dev-system
-  [config-options]
-  (let [{:keys [web-port
-                data-host data-port data-user data-password
-                queue-host queue-port queue-user queue-password queue-vhost
-                queue-name
-                ]} config-options]
-    (system-map
-     :db-store (store)
-     :db (using (db "akvo.notifications.store-mem")
-                {:store :db-store})
-     :es (using (event-shredder queue-host
-                                queue-port
-                                queue-user
-                                queue-password
-                                queue-vhost)
-                {:db :db})
 
-     :event-handler (using (event-handler queue-host
-                                          queue-port
-                                          queue-user
-                                          queue-password
-                                          queue-vhost)
-                           {:db :db})
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Application component
 
-     :web (using (webapp web-port)
-                 {:db :db})
-     :app (using (app)
-                 {:es :es
-                  :event-handler :event-handler}))))
+(defrecord App []
+  Lifecycle
+
+  (start [this]
+    (info "Akvo notifications started")
+    this)
+
+  (stop [this]
+    (info "Akvo notifications stopped")
+    this))
+
+(defn app
+  "Creates a new app component"
+  []
+  (map->App {}))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Production system
+
+(defn production-system
+  [{:keys [mode web-port backend
+           queue-host queue-port queue-user queue-password queue-vhost]}]
+  (system-map
+   :store (store backend)
+   :drafts (using (drafts queue-host
+                          queue-port
+                          queue-user
+                          queue-password
+                          queue-vhost)
+                  {:store :store})
+   :events (using (events queue-host
+                          queue-port
+                          queue-user
+                          queue-password
+                          queue-vhost)
+                  {:store :store})
+   :web (using (web mode web-port)
+               {:store :store})
+   :app (using (app)
+               {:web :web
+                :drafts :drafts})))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Test system
+
+(def test-system production-system)

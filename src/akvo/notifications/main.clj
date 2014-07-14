@@ -15,34 +15,31 @@
 ;;  The full license text can also be seen at
 ;;  <http://www.gnu.org/licenses/agpl.html>.
 
-(ns
-  ^{:doc "Akvo notificaitons use the Component framework structure."}
+(ns ^{:doc "Akvo notifications is a micro service that slurps messages from
+  services and creates events for users."}
   akvo.notifications.main
-  (:require
-   [com.stuartsierra.component :as component]
-   [akvo.notifications.systems :as systems]
-   [clojure.string :as string]
-   [clojure.tools.cli :refer (parse-opts)])
-  (:gen-class))
+  (:gen-class)
+  (:require [akvo.notifications.systems :as systems]
+            [clojure.string :as string]
+            [clojure.pprint :refer (pprint)]
+            [clojure.tools.cli :refer (parse-opts)]
+            [taoensso.timbre :refer (info set-level!)]
+            [com.stuartsierra.component :as component]))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; CLI
 
 (def options
-  [
-   ;; ["-wh" "--web-host HOST" "Web service host"
-   ;;  :default "localhost"]
+  [["-m" "--mode MODE" "Execution mode. production or dev"
+    :default "production"]
    ["-wp" "--web-port PORT" "Web service port"
     :default 3000
     :parse-fn #(Integer/parseInt %)
     :validate [#(< 0 % 0x10000)]]
-   ["-dh" "--data-host HOST" "Datastore host"
-    :default "localhost"]
-   ["-dp" "--data-port PORT" "Datastore port"
-    :default 5002
-    :parse-fn #(Integer/parseInt %)
-    :validate [#(< 0 % 0x10000)]]
-   ["-qh" "--queue-host HOST" "Queue host"
+   ["-b" "--backend store" "Storage backend"
+    :default "store-mem"]
+      ["-qh" "--queue-host HOST" "Queue host"
     :default "localhost"]
    ["-qp" "--queue-port PORT" "Queue port"
     :default 5672
@@ -50,12 +47,10 @@
     :validate [#(< 0 % 0x10000)]]
    ["-qu" "--queue-user USERNAME" "Queue username"
     :default "guest"]
-   ["-qc" "--queue-password PASSWORD" "Queue password"
+   ["-qpa" "--queue-password PASSWORD" "Queue password"
     :default "guest"]
    ["-qv" "--queue-vhost VHOST" "Queue vhost"
     :default "/"]
-   ["-qn" "--queue-name QUEUE" "Queue name"
-    :default "notif.service-events"]
    ["-h" "--help"]])
 
 (defn- usage
@@ -81,6 +76,16 @@
   (println message)
   (System/exit status))
 
+(defn set-logging-level
+  "If we run in production we don't want too much logging so. Timbre
+  have the following ordered levels: [:trace :debug :info :warn :error
+  :fatal :report]"
+  [options]
+  (if (= (:mode options) "production")
+    (set-level! :info)
+    (set-level! :trace)))
+
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Application lifecycle
 
@@ -88,6 +93,7 @@
 
 (defn init
   [s options]
+  (set-logging-level options)
   (alter-var-root #'system (constantly (s options))))
 
 (defn start []
@@ -97,12 +103,11 @@
   (alter-var-root #'system (fn [s] (when s (component/stop s)))))
 
 (defn -main
-  "Starts the application. For now the dev-system is used for all
-  possible scenarios."
+  "Entry point to the application"
   [& args]
   (let [{:keys [options errors summary]} (parse-opts args options)]
     (cond
      (:help options)  (exit 0 (usage summary))
      errors (exit 1 (error-message errors)))
-    (init systems/dev-system options)
+    (init systems/production-system options)
     (start)))

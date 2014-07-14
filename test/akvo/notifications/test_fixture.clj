@@ -15,25 +15,24 @@
 ;;  The full license text can also be seen at
 ;;  <http://www.gnu.org/licenses/agpl.html>.
 
-(ns akvo.notifications.test-fixture
-  (:require
-   [akvo.notifications.main :as main]
-   [akvo.notifications.systems :as systems]
-   [clojure.tools.cli :refer (parse-opts)]))
+(ns ^{:doc "Fixture that sets up the system"}
+    akvo.notifications.test-fixture
+    (:require [akvo.notifications.main :as main]
+              [akvo.notifications.systems :as systems]
+              [clojure.tools.cli :refer (parse-opts)]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Setup
+
 
 (def test-options (:options (parse-opts []
                                         main/options)))
 
 (def base-url (str "http://localhost:" (:web-port test-options)))
 
-(def services-url (str base-url "/services"))
-
 (defn system-fixture [f]
   (try
-    (main/init systems/dev-system test-options)
+    (main/init systems/test-system test-options)
     (main/start)
     (f)
     (finally (main/stop))))
