@@ -21,6 +21,10 @@
               [akvo.notifications.systems :as systems]
               [clojure.tools.cli :refer (parse-opts)]))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Setup
+
+
 (def test-options (:options (parse-opts []
                                         main/options)))
 

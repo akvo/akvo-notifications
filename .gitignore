@@ -8,6 +8,9 @@ pom.xml
 .lein-repl-history
 .lein-plugins/
 
+# Pyhton test project
+python/virt_env/env
+
 # Emacs
 # -*- mode: gitignore; -*-
 *~
