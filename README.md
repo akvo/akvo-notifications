@@ -1,28 +1,35 @@
-# Akvo notifications
+# About Akvo notifications
 
-**Very early work in progress!**
-
-The job of the notification service is to react on events from services
-and make those events into notifications based on users. One could argue
+Akvo notifications turns business events into user notifications. One could argue
 that the notification service twists the perspective from services to
 users. Making it possible to ask what happened in the system, from a
 user perspective.
 
-Akvo-notifications is a Clojure application that listen to a Rabbit
-Message Queue and make data available for services with a REST API built
-with Liberator.
+Akvo-notifications is a Clojure application that listen to a AMQP Message Queue and make data available for services with a REST API built with Liberator. Akvo notifications is currenty **under development**.
 
-## Issues 
+## Status 
 - [Issue list](https://github.com/akvo/akvo-notifications/issues?state=open)
 - [Issue board](https://waffle.io/akvo/akvo-notifications/)
 
 [![Stories in Ready](https://badge.waffle.io/akvo/akvo-notifications.svg?label=ready&title=Ready)](http://waffle.io/akvo/akvo-notifications)
 
+## Try Akvo notifications
+Vagrant and stuff?
 
 ## Usage
+
+- CLI
+- Vagrant?
+- 
+
 At the moment, to run akvo-notification needs to be able to connect to RabbitMQ. This should not be the case, but for now that is how it is :-(
 
 When running the REST:ish API is available at [localhost:3000](http://localhost:3000)
+
+
+## HTTP API
+
+- Swagger?
 
 
 ### Uberjar
@@ -53,6 +60,8 @@ Options:
 
 Copyright (C) 2014 Stichting Akvo (Akvo Foundation)
 ```
+
+## Development
 
 ### Leiningen
 To run the application issue:
@@ -107,6 +116,12 @@ This should make the notification service se a message containing "Haj from Pyth
 
 ## API
 A "map" of the REST:ish API is available at the [root resouce](http://localhost:3000). The API supports JSON & EDN. Resources don't use trailing slashes.
+
+## Contributions
+- 80 characters with
+- Eastwook & Kibit
+- Aim to write short & pure functions
+- 
 
 ## Legal
 Copyright (C) 2014 Stichting Akvo (Akvo Foundation)
