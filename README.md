@@ -12,9 +12,12 @@ Akvo-notifications is a Clojure application that listen to a Rabbit
 Message Queue and make data available for services with a REST API built
 with Liberator.
 
-## PM 
-- [Issue board](https://huboard.com/akvo/akvo-notifications/)  
+## Issues 
 - [Issue list](https://github.com/akvo/akvo-notifications/issues?state=open)
+- [Issue board](https://waffle.io/akvo/akvo-notifications/)
+
+[![Stories in Ready](https://badge.waffle.io/akvo/akvo-notifications.svg?label=ready&title=Ready)](http://waffle.io/akvo/akvo-notifications)
+
 
 ## Usage
 At the moment, to run akvo-notification needs to be able to connect to RabbitMQ. This should not be the case, but for now that is how it is :-(
