@@ -15,7 +15,8 @@
 ;;  The full license text can also be seen at
 ;;  <http://www.gnu.org/licenses/agpl.html>.
 
-(ns ^{:doc "Describes systems that is managed via the component framework"}
+(ns ^{:doc "Describes systems that is managed via the component framework. Also
+  defines a simple application component."}
   akvo.notifications.systems
   (:require [akvo.notifications.drafts :refer (drafts)]
             [akvo.notifications.events :refer (events)]
@@ -40,7 +41,7 @@
     this))
 
 (defn app
-  "Creates a new app component"
+  "Initialize the app component"
   []
   (map->App {}))
 
@@ -49,6 +50,7 @@
 ;;; Production system
 
 (defn production-system
+  "Defines the production system."
   [{:keys [mode web-port backend
            queue-host queue-port queue-user queue-password queue-vhost]}]
   (system-map
@@ -75,4 +77,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Test system
 
-(def test-system production-system)
+(def test-system
+  "Defines the test system."
+  production-system)

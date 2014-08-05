@@ -16,8 +16,9 @@
 ;;  <http://www.gnu.org/licenses/agpl.html>.
 
 (ns ^{:doc "Component that handles drafts (raw messages that carry state from
-  services on the message queue. It's a queue before the actual queue
-  which once a common data store exists should be cut."}
+  services on the message queue. It's a queue before the proper event
+  queue. Once a common data store exists, drafts can be cut from the
+  service."}
   akvo.notifications.drafts
   (:require [akvo.notifications.events :as e]
             [akvo.notifications.utils :refer (build-vhost setup-handler)]
@@ -39,7 +40,7 @@
 (defn prepare-draft
   "Creates an outline for an event which is neither persited or have an
   id. We set id to be nil to be able to validate the event with a schema
-  before it's persisted and got it's real id."
+  before it's persisted and have got it's proper id."
   [{:keys [:timestamp :type]} body]
   {:body body
    :id nil
@@ -47,21 +48,21 @@
    :type type})
 
 (defn validate-draft
-  "Validates drafts based on event schemas. If we can't "
+  "Validates drafts based on event schemas. If draft is not valid we log."
   [schemas meta draft]
   (try
     (s/validate ((keyword (:type meta)) schemas) draft)
     (catch Exception e (warn (.getMessage e) draft))))
 
 (defn draft->event
-  "Dispatch to configured data store and call create-event. "
+  "Dispatch to configured data store and call (create-event <store> <event>)"
   [store event]
   ((resolve (symbol (:backend store) "create-event")) (:data store) event))
 
 (defn publish-event
-  "Put the event on the queue to be processed. Also make sure we carry
-  relevant meta data. At the moment we do only send events encoded as
-  application/json."
+  "Put the persisted event on the queue to be processed. Also make sure
+  we carry relevant meta data. At the moment we do only send events
+  encoded as application/json."
   [event]
   (let [conn (rmq/connect)
         chan (lch/open conn)
@@ -116,6 +117,7 @@
 ;;; Public API
 
 (defn drafts
+  "Starts the Draft component."
   [host port user password vhost]
   (map->Drafts {:queue "notif.drafts"
                 :uri   (str "amqp://" user ":" password "@" host ":" port

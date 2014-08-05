@@ -15,8 +15,7 @@
 ;;  The full license text can also be seen at
 ;;  <http://www.gnu.org/licenses/agpl.html>.
 
-(ns ^{:doc "Akvo notifications is a micro service that slurps messages from
-  services and creates events for users."}
+(ns ^{:doc "Main namespace that deals with the service CLI & life cycle."}
   akvo.notifications.main
   (:gen-class)
   (:require [akvo.notifications.systems :as systems]
@@ -31,6 +30,7 @@
 ;;; CLI
 
 (def options
+  "CLI options."
   [["-m" "--mode MODE" "Execution mode. production or dev"
     :default "production"]
    ["-wp" "--web-port PORT" "Web service port"
@@ -77,33 +77,39 @@
   (System/exit status))
 
 (defn set-logging-level
-  "If we run in production we don't want too much logging so. Timbre
-  have the following ordered levels: [:trace :debug :info :warn :error
-  :fatal :report]"
+  "Based on mode (production / dev) set logging level."
   [options]
-  (if (= (:mode options) "production")
-    (set-level! :info)
-    (set-level! :trace)))
+  ;; Timbre ordered levels: [:trace :debug :info :warn :error :fatal :report]
+   (if (= (:mode options) "production")
+     (set-level! :info)
+     (set-level! :trace)))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Application lifecycle
 
-(def system nil)
+(def system
+  "The one global system var."
+  nil)
 
 (defn init
+  "Set logging level & init the system."
   [s options]
   (set-logging-level options)
   (alter-var-root #'system (constantly (s options))))
 
-(defn start []
+(defn start
+  "Start the system."
+  []
   (alter-var-root #'system component/start))
 
-(defn stop []
+(defn stop
+  "Stop the system."
+  []
   (alter-var-root #'system (fn [s] (when s (component/stop s)))))
 
 (defn -main
-  "Entry point to the application"
+  "Main entry point."
   [& args]
   (let [{:keys [options errors summary]} (parse-opts args options)]
     (cond
