@@ -109,8 +109,9 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Public API
 
-(defn store [backend]
+(defn store
   "Initialize the Memory store component."
+  [backend]
   (map->MemStorage {:backend (str "akvo.notifications." backend)
                     :data    store-data}))
 
