@@ -15,7 +15,7 @@
 ;;  The full license text can also be seen at
 ;;  <http://www.gnu.org/licenses/agpl.html>.
 
-(ns ^{:doc "Utility functions"}
+(ns ^{:doc "Utility functions."}
   akvo.notifications.utils
   (:require [clojure.string :refer (blank?)]
             [langohr.consumers :as lc]
@@ -26,6 +26,7 @@
 ;;; RabbitMQ
 
 (defn build-vhost
+  "Handle the different cases of empty / or defined vhost."
   [vhost]
   (cond
    (blank? vhost) "/%2F"
@@ -33,6 +34,7 @@
    :else          vhost))
 
 (defn setup-handler
+  "Setup langohr handler."
   [channel connection queue handler]
   {:pre [(not (nil? channel))
          (not (nil? connection))]}

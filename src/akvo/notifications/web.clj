@@ -15,7 +15,7 @@
 ;;  The full license text can also be seen at
 ;;  <http://www.gnu.org/licenses/agpl.html>.
 
-(ns ^{:doc "Web app that exposes a REST API"}
+(ns ^{:doc "Component that exposes a REST API."}
   akvo.notifications.web
   (:import [com.fasterxml.jackson.core JsonParseException])
   (:require [bidi.bidi :refer (compile-route
@@ -37,12 +37,19 @@
 ;;; Utility
 
 (defn db-backend
+  "Grabs backend from provided context."
   [ctx]
   (get-in ctx [:request ::webapp :store :backend]))
 
 (defn db-data
+  "Grabs data from provided context."
   [ctx]
   (get-in ctx [:request ::webapp :store :data]))
+
+(defn get-route-id
+  "Get route id from provided context."
+  [ctx]
+  (read-string (get-in ctx [:request :route-params :id])))
 
 (defmacro db<
   "Db chew - macro that feeds configured data store backend with
@@ -60,15 +67,12 @@
         (db-data ~@(keys &env))
         ~@rest))))
 
-(defn get-route-id
-  [ctx]
-  (read-string (get-in ctx [:request :route-params :id])))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Liberator utility
 
 (def available-media-types
-  "JSON & EDN"
+  "JSON & EDN."
   ["application/json" "application/edn"])
 
 (def ^:private error-responses
@@ -147,6 +151,7 @@
 ;;; Root & not found resources
 
 (def root-map
+  "Used for serving the home page."
   {:name "Akvo notifications"})
 
 (defresource root
@@ -256,6 +261,7 @@
 ;;; Handler
 
 (def app-routes ; No compile-route https://github.com/juxt/bidi/issues/17
+  "Defines http resources."
   ["/" {""         root
         "events"   {""        events-coll
                     ["/" :id] events-nth}
@@ -266,13 +272,13 @@
         [#".*"]    not-found}])
 
 (defn- wrap-app-component
-  "Helper to make-hander that adds the api to the request"
+  "Helper to make-hander that adds the api to the request."
   [f component]
   (fn [req]
     (f (assoc req ::webapp component))))
 
 (defn handler
-  "Returns a handler with the web app component assoc:ed to the request"
+  "Returns a handler with the web app component assoc:ed to the request."
   [component]
   (-> (make-handler app-routes)
       (wrap-app-component component)
@@ -304,6 +310,8 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Public API
 
-(defn web [mode port]
+(defn web
+  "Initialize the web component."
+  [mode port]
   (map->Web {:mode mode
              :port port}))

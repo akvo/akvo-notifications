@@ -15,7 +15,11 @@
 ;;  The full license text can also be seen at
 ;;  <http://www.gnu.org/licenses/agpl.html>.
 
-(ns ^{:doc "Events.. 'suid' = 'service user id' e.i. external service user id"}
+(ns ^{:doc "Component that handle events. The namespace listens to a AMQP queue
+  and then validates messages against matching event schemas and if
+  valid compute relevant graph. Since both external and internal user
+  id's exists 'suid' (service user id) is used for external user id's
+  and uid for the internal user id."}
   akvo.notifications.events
   (:import [com.fasterxml.jackson.core JsonParseException])
   (:require [akvo.notifications.utils :refer (build-vhost setup-handler)]
@@ -36,10 +40,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Schema utilities
 
-(defn parse-int
-  [string]
-  (Integer/parseInt (re-find #"\A-?\d+" string)))
-
 (defn deep-merge
   "Recursively merges maps. If keys are not maps, the last value wins."
   [& vals]
@@ -58,47 +58,47 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Schemas
 
-(def BaseEvent
-  "Basic event schema"
-  {
-   ;; :body {:service (s/both s/Str
-   ;;                         (s/pred valid-service-name? 'valid-service-name?))}
-   :id (s/maybe s/Int)
+(def BaseEventSchema
+  "Root event schema."
+  {:id (s/maybe s/Int)
    :timestamp long
    :type s/Str})
 
-(def BaseServiceEvent
-  ""
+(def BaseServiceEventSchema
+  "BaseEventSchema + body with service."
   (deep-merge
-   BaseEvent
+   BaseEventSchema
    {:body
     {:service (s/both s/Str
                       (s/pred valid-service-name? 'valid-service-name?))}}))
 
-(def Subscriptions
-  "Start subscription schema"
-  (deep-merge BaseServiceEvent {:body {:email s/Str
-                                       :item  s/Str
-                                       :name  (s/maybe s/Str)
-                                       :suid  s/Int}}))
+(def SubscriptionsSchema
+  "Validates start / end subscriptions messages."
+  (deep-merge BaseServiceEventSchema
+              {:body {:email s/Str
+                      :item  s/Str
+                      :name  (s/maybe s/Str)
+                      :suid  s/Int}}))
 
-(def ProjectDonation
-  "..."
-  (deep-merge BaseServiceEvent {:body {:amount   s/Int
-                                       :currency s/Str
-                                       :item     s/Str}}))
+(def ProjectDonationSchema
+  "Validates project donations messages."
+  (deep-merge BaseServiceEventSchema
+              {:body {:amount   s/Int
+                      :currency s/Str
+                      :item     s/Str}}))
 
-(def UserNotified
-  ""
-  (deep-merge BaseEvent {:body {:email s/Str
-                                :events [s/Int]}}))
+(def UserNotifiedSchema
+  "Validates message recieved when a user got notified."
+  (deep-merge BaseEventSchema
+              {:body {:email s/Str
+                      :events [s/Int]}}))
 
 (def schemas
-  "A map of all different schemas indexed by the event (keywordized) types"
-  {:start-subscription Subscriptions
-   :end-subscription   Subscriptions
-   :project-donation   ProjectDonation
-   :user-notified      UserNotified})
+  "A map of all different schemas indexed by the event (keywordized) types."
+  {:start-subscription SubscriptionsSchema
+   :end-subscription   SubscriptionsSchema
+   :project-donation   ProjectDonationSchema
+   :user-notified      UserNotifiedSchema})
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -139,10 +139,12 @@
   (:id (parse-message meta message)))
 
 (defnk get-event
+  "Based on the event id get the event from the configured data store."
   [store event-id]
   ((resolve (symbol (:backend store) "events-nth")) (:data store) event-id))
 
 (defnk validate-event
+  "Validate event with the corresponding schema."
   [event]
   (try
     (s/validate ((keyword (:type event)) schemas) event)
@@ -150,6 +152,7 @@
                            nil))))
 
 (defnk get-or-create-user
+  "Provide user either by getting existing or creating a new."
   [store validated]
   (debug "get-or-create-user")
   (let [email        (get-in validated [:body :user-email])
@@ -161,15 +164,19 @@
     ((resolve fn) (:data store) service-name suid email name)))
 
 (defnk start-subscription
-  [store validated user]
+  "With validated event and a user start a subscription at configured
+  data store."
+  [store validated-event user]
   (debug "start-subscription")
-  (let [service-name (get-in validated [:body :service])
-        item         (get-in validated [:body :item])
+  (let [service-name (get-in validated-event [:body :service])
+        item         (get-in validated-event [:body :item])
         fn           (symbol (:backend store) "start-subscription")]
     ((resolve fn) (:data store) service-name item (:id user) (:email user)
      (:name user))))
 
 (defnk end-subscription
+  "With validated event and a user stop a subscription at configured
+  data store."
   [store validated user]
   (debug "end-subscription")
   (let [service (get-in validated [:body :service])
@@ -178,6 +185,7 @@
     ((resolve fn) (:data store) service item (:id user) (:email user))))
 
 (defnk project-donation
+  "With configured data store make a project donation."
   [store validated]
   (debug "project-donation")
   (let [service-name (get-in validated [:body :service])
@@ -191,6 +199,7 @@
      email)))
 
 (defnk user-notified
+  "With configured data store remove event from users unread notifications."
   [store validated]
   (let [email  (get-in validated [:body :email])
         events (get-in validated [:body :events])
@@ -202,42 +211,39 @@
 ;;; Graphs
 
 (def base-graph
-  "Base graph that will parse message with the help of Content-Type,
-  then get the id and grab the event from configured data store. When we
-  assoc on the chain should end in a final keyword element."
+  "From raw message provide a validated event."
   {:event-id get-event-id
    :event get-event
    :validated validate-event})
 
 (def start-subscription-graph
-  "Uses the schemas var to dig up and validate the event based on event type."
+  "Computed when user subscribes to an item."
   (assoc base-graph
     :user get-or-create-user
     :final start-subscription))
 
 (def end-subscription-graph
-  "Uses the schemas var to dig up and validate the event based on event type."
+  "Computed when user unsubscribes from an item."
   (assoc base-graph
     :user get-or-create-user
     :final end-subscription))
 
 (def project-donation-graph
-  ".."
+  "Computed on a project donation."
   (assoc base-graph
     :final project-donation))
 
 (def user-notified-graph
-  ".."
+  "Computed when user have been notifed."
   (assoc base-graph
     :final user-notified))
 
 (def graphs
-  "All the graphs ready to be computed"
+  "All the graphs in a map ready to be computed."
   {:start-subscription start-subscription-graph
    :end-subscription   end-subscription-graph
    :project-donation   project-donation-graph
-   :user-notified      user-notified-graph
-   })
+   :user-notified      user-notified-graph})
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -301,6 +307,7 @@
 ;;; Public API
 
 (defn events
+  "Starts the Events component."
   [host port user password vhost]
   (map->Events {:queue "notif.events"
                 :uri   (str "amqp://" user ":" password "@" host ":" port

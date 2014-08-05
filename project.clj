@@ -15,8 +15,8 @@
 ;  The full license text can also be seen at
 ;  <http://www.gnu.org/licenses/agpl.html>.
 
-(defproject akvo-notifications "0.4.0-SNAPSHOT"
-  :description "Akvo-notifications"
+(defproject akvo-notifications "0.4.1-SNAPSHOT"
+  :description "Akvo service that turns business events into user notifications"
   :url "https://github.com/akvo/akvo-notifications"
   :license {:name "GNU Affero General Public License"
             :url "https://www.gnu.org/licenses/agpl"}
@@ -38,4 +38,5 @@
   :profiles {:dev {:dependencies [[clj-http "0.9.1"]
                                   [org.clojure/tools.namespace "0.2.4"]]
                    :source-paths ["dev"]}}
+  :codox {:exclude [user]}
   :main akvo.notifications.main)
