@@ -79,7 +79,7 @@
 ;;                 :type         "project-donation"}
 ;;                {:item    "project-7"
 ;;                 :currency "eu"
-;;                 :amount 52
+;;                 :amount 55
 ;;                 :service "akvo-dash"})
 
 ;; (publish-draft {:content-type "application/json"

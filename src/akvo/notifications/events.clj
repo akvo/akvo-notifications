@@ -166,10 +166,10 @@
 (defnk start-subscription
   "With validated event and a user start a subscription at configured
   data store."
-  [store validated-event user]
+  [store validated user]
   (debug "start-subscription")
-  (let [service-name (get-in validated-event [:body :service])
-        item         (get-in validated-event [:body :item])
+  (let [service-name (get-in validated [:body :service])
+        item         (get-in validated [:body :item])
         fn           (symbol (:backend store) "start-subscription")]
     ((resolve fn) (:data store) service-name item (:id user) (:email user)
      (:name user))))
