@@ -31,8 +31,8 @@
         (is (empty? users) "Users is empty"))
       
       (let [users (.openMap store "users")
-          _ (.put users :email "nobody@akvo.org")
-          tx (.commit store)]
-      (is (= 1 tx) "First transaction")
-      (is (= 1 (count users)) "Number of users")
-      (is (= "nobody@akvo.org" (.get users :email)) "We can use keywords")))))
+            _ (.put users :email "nobody@akvo.org")
+            tx (.commit store)]
+        (is (= 1 tx) "First transaction")
+        (is (= 1 (count users)) "Number of users")
+        (is (= "nobody@akvo.org" (.get users :email)) "We can use keywords")))))
