@@ -34,7 +34,8 @@
                  [prismatic/plumbing "0.3.2"]
                  [prismatic/schema "0.2.4"]
                  [ring/ring-core "1.2.2"]
-                 [ring/ring-jetty-adapter "1.2.2"]]
+                 [ring/ring-jetty-adapter "1.2.2"]
+                 [com.h2database/h2 "1.4.180"]]
   :profiles {:dev {:dependencies [[clj-http "0.9.1"]
                                   [org.clojure/tools.namespace "0.2.4"]]
                    :source-paths ["dev"]}}
