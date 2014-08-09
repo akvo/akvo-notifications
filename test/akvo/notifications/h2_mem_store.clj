@@ -35,4 +35,51 @@
             tx (.commit store)]
         (is (= 1 tx) "First transaction")
         (is (= 1 (count users)) "Number of users")
-        (is (= "nobody@akvo.org" (.get users :email)) "We can use keywords")))))
+        (is (= "nobody@akvo.org" (.get users :email)) "We can use keywords"))
+
+      (let [services (.openMap store "services")]
+
+        (.put services :s1 "test-service-1")
+        (.commit store)
+
+        (.put services :s2 "test-service-2")
+        (.commit store)
+
+        (is (= 2 (count services)))
+
+        (is (= "test-service-1" (.get services :s1)))
+        (is (= "test-service-2" (.get services :s2)))
+
+        (.remove services :s1)
+        (.commit store)
+
+        (is (= 1 (count services)))
+        (is (nil? (.get services :s1)))
+
+        (.put services :s1 "test-service-1.1")
+        (.commit store)
+
+        (is (= "test-service-1.1" (.get services :s1)))
+
+        (is (= "test-service-1") (-> services
+                                   (.openVersion 1) ;; versioning
+                                   (.get :s1))))
+
+      (let [subscriptions (.openMap store "subscriptions")
+            srv-list ["service-1" "service-2" "service-3"]
+            data [{:id 1
+                   :name "x"
+                   :value true}
+                  {:id 2
+                   :name "y"
+                   :value false}]]
+
+        (.put subscriptions "nobody@akvo.org" srv-list)
+        (.commit store)
+
+        (is (= srv-list (.get subscriptions "nobody@akvo.org")))
+
+        (.put subscriptions :data data)
+        (.commit store)
+
+        (is (= data (.get subscriptions :data)))))))
