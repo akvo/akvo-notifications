@@ -35,7 +35,10 @@
                  [prismatic/schema "0.2.4"]
                  [ring/ring-core "1.2.2"]
                  [ring/ring-jetty-adapter "1.2.2"]
-                 [com.h2database/h2 "1.4.180"]]
+                 [yesql "0.4.0"]
+                 [org.clojure/java.jdbc "0.3.5"]
+                 [postgresql/postgresql "9.1-901-1.jdbc4"]
+                 [org.flywaydb/flyway-core "3.0"]]
   :profiles {:dev {:dependencies [[clj-http "0.9.1"]
                                   [org.clojure/tools.namespace "0.2.4"]]
                    :source-paths ["dev"]}}
