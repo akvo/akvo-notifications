@@ -5,7 +5,7 @@ that the notification service twists the perspective from services to
 users. Making it possible to ask what happened in the system, from a
 user perspective.
 
-Akvo-notifications is a Clojure application that listen to a AMQP Message Queue and make data available for services with a REST API built with Liberator. Akvo notifications is currenty **under development**.
+Akvo-notifications is a Clojure application that listen to a [AMQP](http://www.amqp.org/) Message Queue and make data available for services with a REST API built with [Liberator](https://clojure-liberator.github.io/liberator/). Akvo notifications is **no longer under active development**.
 
 ## Status 
 - [Issue list](https://github.com/akvo/akvo-notifications/issues?state=open)
@@ -119,7 +119,7 @@ A "map" of the REST:ish API is available at the [root resouce](http://localhost:
 
 ## Contributions
 - 80 characters with
-- Eastwook & Kibit
+- Use [Eastwood](https://github.com/jonase/eastwood) & [Kibit](https://github.com/jonase/kibit)
 - Aim to write short & pure functions
 - 
 
